@@ -20,7 +20,7 @@ class MachineType(enum.Enum):
 
 ### Database Tables ###
 class OrderDB(Base):
-    __tablename__ = "orders_db"
+    __tablename__ = "ordersdb"
 
     order_number = Column(Integer, primary_key=True)
     material_number = Column(Integer, nullable=False)
@@ -28,13 +28,13 @@ class OrderDB(Base):
     end_date = Column(Date, nullable=False)
     num_pieces = Column(Integer, nullable=False)
 
-    operations = relationship("Operation", back_populates="order")
+    operations = relationship("OperationDB", back_populates="order")
 
 class OperationDB(Base):
-    __tablename__ = "operations_db"
+    __tablename__ = "operationsdb"
 
     id = Column(Integer, primary_key=True)
-    order_number = Column(Integer, ForeignKey("orders_db.order_number"), nullable=False)
+    order_number = Column(Integer, ForeignKey("ordersdb.order_number"), nullable=False)
     operation_code = Column(Integer, nullable=False)
     machine_type = Column(Enum(MachineType), nullable=False)
 
@@ -42,10 +42,10 @@ class OperationDB(Base):
     tasks = relationship("TaskDB", back_populates="operation")
 
 class TaskDB(Base):
-    __tablename__ = "tasks_db"
+    __tablename__ = "tasksdb"
 
     id = Column(Integer, primary_key=True)
-    operation_id = Column(Integer, ForeignKey("operations_db.id"), nullable=False)
+    operation_id = Column(Integer, ForeignKey("operationsdb.id"), nullable=False)
     process_type = Column(Enum(ProcessType), nullable=False)    # Machine Preparation or Quality Control or Processing
 
     date = Column(Date, nullable=False)                         # Date when task was started
