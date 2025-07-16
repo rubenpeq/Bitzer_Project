@@ -141,7 +141,7 @@ cd ...
 - **Backend**: Configure your database connection in `.env` or environment variables:
 
   ```ini
-  DATABASE_URL=postgresql://user:password@localhost:5432/your_db_name
+  DATABASE_URL=postgresql://user:password@localhost:PORT
   ```
 
 ---
