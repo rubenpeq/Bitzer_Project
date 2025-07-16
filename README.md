@@ -10,7 +10,7 @@ This repository contains a full-stack application developed during an internship
 
 - **Frontend:** React, Vite, TypeScript
 - **Backend:** FastAPI, Uvicorn
-- **Database:** PostgreSQL (via Docker Compose)
+- **Database:** PostgreSQL
 
 ---
 
@@ -18,9 +18,9 @@ This repository contains a full-stack application developed during an internship
 
 ```mermaid
 flowchart LR
-  Tablet["Tablet Browser"] --> Frontend["React + Vite + TS"]
+  Tablet["Web Browser"] --> Frontend["React + Vite"]
   Frontend --> Backend["FastAPI (Uvicorn)"]
-  Backend --> Database["PostgreSQL (Docker Compose)"]
+  Backend --> Database["PostgreSQL"]
 ```
 
 ---
