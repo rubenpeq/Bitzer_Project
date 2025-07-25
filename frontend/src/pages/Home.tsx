@@ -20,7 +20,7 @@ type Order = {
 };
 
 export default function Home() {
-  const [orders, setOrders] = useState<Order[]>([]);  // <-- start empty, will fill after fetch
+  const [orders, setOrders] = useState<Order[]>([]); // <-- start empty, will fill after fetch
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,13 +107,22 @@ export default function Home() {
     <div className="p-3 position-relative" style={{ height: "100%" }}>
       <Form.Control
         type="search"
-        placeholder="Search orders by number or material..."
+        placeholder="Pesquisar por número de ordem ou material ..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-3"
       />
 
-      {loading && <Spinner animation="border" />}
+      {loading && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ height: "60vh" }}
+        >
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      )}
 
       {!loading && filteredOrders.length === 0 && (
         <Alert variant="warning">No orders found.</Alert>
@@ -168,31 +177,43 @@ export default function Home() {
         <Modal.Body>
           <Form>
             <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>Nº Ordem</Form.Label>
+              <Form.Label column sm={4}>
+                Nº Ordem
+              </Form.Label>
               <Col sm={8}>
                 <Form.Control
                   type="number"
                   value={newOrder.order_number}
                   onChange={(e) =>
-                    setNewOrder({ ...newOrder, order_number: Number(e.target.value) })
+                    setNewOrder({
+                      ...newOrder,
+                      order_number: Number(e.target.value),
+                    })
                   }
                 />
               </Col>
             </Form.Group>
             <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>Nº Material</Form.Label>
+              <Form.Label column sm={4}>
+                Nº Material
+              </Form.Label>
               <Col sm={8}>
                 <Form.Control
                   type="number"
                   value={newOrder.material_number}
                   onChange={(e) =>
-                    setNewOrder({ ...newOrder, material_number: Number(e.target.value) })
+                    setNewOrder({
+                      ...newOrder,
+                      material_number: Number(e.target.value),
+                    })
                   }
                 />
               </Col>
             </Form.Group>
             <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>Data Início</Form.Label>
+              <Form.Label column sm={4}>
+                Data Início
+              </Form.Label>
               <Col sm={8}>
                 <Form.Control
                   type="date"
@@ -204,7 +225,9 @@ export default function Home() {
               </Col>
             </Form.Group>
             <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>Data Fim</Form.Label>
+              <Form.Label column sm={4}>
+                Data Fim
+              </Form.Label>
               <Col sm={8}>
                 <Form.Control
                   type="date"
@@ -216,13 +239,18 @@ export default function Home() {
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
-              <Form.Label column sm={4}>Nº Peças</Form.Label>
+              <Form.Label column sm={4}>
+                Nº Peças
+              </Form.Label>
               <Col sm={8}>
                 <Form.Control
                   type="number"
                   value={newOrder.num_pieces}
                   onChange={(e) =>
-                    setNewOrder({ ...newOrder, num_pieces: Number(e.target.value) })
+                    setNewOrder({
+                      ...newOrder,
+                      num_pieces: Number(e.target.value),
+                    })
                   }
                 />
               </Col>

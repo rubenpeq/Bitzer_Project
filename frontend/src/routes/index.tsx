@@ -9,8 +9,8 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/order" element={<Orders />} />
-      <Route path="/operation" element={<Operations />} />
+      <Route path="/order/:orderNumber" element={<Orders />} />
+      <Route path="/operation/:orderNumber/:operationNumber" element={<Operations />} />
       <Route path="/task" element={<Tasks />} />
     </Routes>
   );
