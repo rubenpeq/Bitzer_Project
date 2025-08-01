@@ -1,5 +1,5 @@
 import { Navbar, Container } from "react-bootstrap";
-import logo from "../assets/bitzer_logo.svg";
+import logo from "../assets/bitzer_logo.png";
 import { Link } from "react-router-dom";
 
 export default function AppNavbar() {

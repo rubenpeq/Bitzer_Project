@@ -25,6 +25,7 @@ export default function Home() {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
+  // --- Load Orders ---
   useEffect(() => {
     setLoading(true);
     fetch(`${API_URL}/orders`)
@@ -44,6 +45,7 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  // --- Handle Sorting on Click ---
   function handleSort(key: keyof Order) {
     let direction: "asc" | "desc" = "asc";
 
@@ -58,6 +60,7 @@ export default function Home() {
     setSortConfig({ key, direction });
   }
 
+  // --- Filter Orders ---
   useEffect(() => {
     setLoading(true);
     const timeout = setTimeout(() => {
@@ -82,7 +85,7 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [searchTerm, orders]);
 
-  // Move sortedOrders useMemo outside so it's accessible
+  // --- Sort FilteredOrders ---
   const sortedOrders = useMemo(() => {
     if (!sortConfig) return filteredOrders;
 
@@ -104,10 +107,12 @@ export default function Home() {
     });
   }, [filteredOrders, sortConfig]);
 
+  // Double click to order details
   const handleRowDoubleClick = (orderNumber: number) => {
     navigate(`/order/${orderNumber}`);
   };
 
+  // Create new order modal
   const handleShowModal = () => setShowModal(true);
   const handleCloseModal = () => {
     setShowModal(false);
