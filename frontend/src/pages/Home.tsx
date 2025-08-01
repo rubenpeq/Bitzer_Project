@@ -34,11 +34,11 @@ export default function Home() {
   });
 
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
-  // Add this useEffect to fetch orders from backend once on component mount
   useEffect(() => {
     setLoading(true);
-    fetch("http://localhost:8000/orders")
+    fetch(`${API_URL}/orders`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch orders");
         return res.json();
@@ -163,7 +163,8 @@ export default function Home() {
       <Button
         variant="success"
         className="position-fixed"
-        style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
+        size="lg"
+        style={{ bottom: "20px", right: "20px", zIndex: 1050}}
         onClick={handleShowModal}
       >
         + Nova Ordem

@@ -38,11 +38,13 @@ export default function OrderDetail() {
     machine_type: "",
   });
 
+  const API_URL = import.meta.env.VITE_FASTAPI_URL;
+
   useEffect(() => {
     setLoading(true);
 
     // Fetch the specific order
-    fetch(`http://localhost:8000/orders/${orderNumber}`)
+    fetch(`${API_URL}/orders/${orderNumber}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch order");
         return res.json();
@@ -51,7 +53,7 @@ export default function OrderDetail() {
       .catch(console.error);
 
     // Fetch operations for the order
-    fetch(`http://localhost:8000/orders/${orderNumber}/operations`)
+    fetch(`${API_URL}/orders/${orderNumber}/operations`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch operations");
         return res.json();

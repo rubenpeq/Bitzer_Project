@@ -4,8 +4,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import enum
-
-Base = declarative_base()
+from .database import Base
 
 ### Enums for process type and machine type ###
 class ProcessType(enum.Enum):

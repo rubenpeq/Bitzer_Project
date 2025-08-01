@@ -3,7 +3,7 @@ import models, schemas
 
 # -------- ORDER --------
 def create_order(db: Session, order: schemas.OrderCreate):
-    db_order = models.OrderDB(**order.dict())
+    db_order = models.OrderDB(**order.model_dump())
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
@@ -18,7 +18,7 @@ def get_orders(db: Session, skip: int = 0, limit: int = 100):
 
 # -------- OPERATION --------
 def create_operation(db: Session, operation: schemas.OperationCreate):
-    db_operation = models.OperationDB(**operation.dict())
+    db_operation = models.OperationDB(**operation.model_dump())
     db.add(db_operation)
     db.commit()
     db.refresh(db_operation)
@@ -33,7 +33,7 @@ def get_operations(db: Session, skip: int = 0, limit: int = 100):
 
 # -------- TASK --------
 def create_task(db: Session, task: schemas.TaskCreate):
-    db_task = models.TaskDB(**task.dict())
+    db_task = models.TaskDB(**task.model_dump())
     db.add(db_task)
     db.commit()
     db.refresh(db_task)

@@ -30,7 +30,7 @@ class Task(TaskBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Operation Schemas
 class OperationBase(BaseModel):
@@ -46,7 +46,7 @@ class Operation(OperationBase):
     tasks: List[Task] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Order Schemas
 class OrderBase(BaseModel):
@@ -63,4 +63,4 @@ class Order(OrderBase):
     operations: List[Operation] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
