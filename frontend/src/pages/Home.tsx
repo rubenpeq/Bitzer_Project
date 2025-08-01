@@ -1,15 +1,7 @@
-import { useState, useEffect } from "react";
-import {
-  Table,
-  Form,
-  Spinner,
-  Alert,
-  Button,
-  Modal,
-  Row,
-  Col,
-} from "react-bootstrap";
+import { useState, useEffect, useMemo } from "react";
+import { Table, Form, Spinner, Alert, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import CreateNewOrder from "../components/CreateNewOrder";
 
 type Order = {
   order_number: number;
@@ -20,18 +12,15 @@ type Order = {
 };
 
 export default function Home() {
-  const [orders, setOrders] = useState<Order[]>([]); // <-- start empty, will fill after fetch
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [newOrder, setNewOrder] = useState<Order>({
-    order_number: 0,
-    material_number: 0,
-    start_date: "",
-    end_date: "",
-    num_pieces: 0,
-  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Order;
+    direction: "asc" | "desc";
+  } | null>(null);
 
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
@@ -55,10 +44,22 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Existing useEffect for filtering orders stays here unchanged
+  function handleSort(key: keyof Order) {
+    let direction: "asc" | "desc" = "asc";
+
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "asc"
+    ) {
+      direction = "desc";
+    }
+
+    setSortConfig({ key, direction });
+  }
+
   useEffect(() => {
     setLoading(true);
-
     const timeout = setTimeout(() => {
       const term = searchTerm.trim().toLowerCase();
 
@@ -68,12 +69,11 @@ export default function Home() {
         return;
       }
 
-      const filtered = orders.filter((order) => {
-        return (
-          order.order_number.toString().toLowerCase().includes(term) ||
-          order.material_number.toString().toLowerCase().includes(term)
-        );
-      });
+      const filtered = orders.filter(
+        (order) =>
+          order.order_number.toString().includes(term) ||
+          order.material_number.toString().includes(term)
+      );
 
       setFilteredOrders(filtered);
       setLoading(false);
@@ -82,6 +82,28 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [searchTerm, orders]);
 
+  // Move sortedOrders useMemo outside so it's accessible
+  const sortedOrders = useMemo(() => {
+    if (!sortConfig) return filteredOrders;
+
+    return [...filteredOrders].sort((a, b) => {
+      const { key, direction } = sortConfig;
+
+      let aVal = a[key];
+      let bVal = b[key];
+
+      // If the values are dates as strings, convert to timestamp for comparison
+      if (key === "start_date" || key === "end_date") {
+        aVal = Date.parse(aVal as string);
+        bVal = Date.parse(bVal as string);
+      }
+
+      if (aVal < bVal) return direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredOrders, sortConfig]);
+
   const handleRowDoubleClick = (orderNumber: number) => {
     navigate(`/order/${orderNumber}`);
   };
@@ -89,18 +111,6 @@ export default function Home() {
   const handleShowModal = () => setShowModal(true);
   const handleCloseModal = () => {
     setShowModal(false);
-    setNewOrder({
-      order_number: 0,
-      material_number: 0,
-      start_date: "",
-      end_date: "",
-      num_pieces: 0,
-    });
-  };
-
-  const handleCreateOrder = () => {
-    setOrders((prev) => [...prev, newOrder]);
-    handleCloseModal();
   };
 
   return (
@@ -113,35 +123,80 @@ export default function Home() {
         className="mb-3"
       />
 
-      {loading && (
+      {loading ? (
         <div
           className="d-flex justify-content-center align-items-center"
           style={{ height: "60vh" }}
         >
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
+          <Spinner animation="border" role="status" />
         </div>
-      )}
-
-      {!loading && filteredOrders.length === 0 && (
+      ) : filteredOrders.length === 0 ? (
         <Alert variant="warning">No orders found.</Alert>
-      )}
-
-      {!loading && filteredOrders.length > 0 && (
+      ) : (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th>Nº Ordem</th>
-                <th>Nº Material</th>
-                <th>Data Início</th>
-                <th>Data Fim</th>
-                <th>Nº Peças</th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("order_number")}
+                >
+                  Nº Ordem{" "}
+                  {sortConfig?.key === "order_number"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
+
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("material_number")}
+                >
+                  Nº Material{" "}
+                  {sortConfig?.key === "material_number"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("start_date")}
+                >
+                  Data Inicio{" "}
+                  {sortConfig?.key === "start_date"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("end_date")}
+                >
+                  Data Fim{" "}
+                  {sortConfig?.key === "end_date"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("num_pieces")}
+                >
+                  Nº Peças{" "}
+                  {sortConfig?.key === "num_pieces"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order, index) => (
+              {sortedOrders.map((order, index) => (
                 <tr
                   key={order.order_number ?? index}
                   onDoubleClick={() => handleRowDoubleClick(order.order_number)}
@@ -159,114 +214,25 @@ export default function Home() {
         </div>
       )}
 
-      {/* Floating button */}
       <Button
         variant="success"
         className="position-fixed"
         size="lg"
-        style={{ bottom: "20px", right: "20px", zIndex: 1050}}
+        style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
         onClick={handleShowModal}
       >
         + Nova Ordem
       </Button>
 
-      {/* Modal */}
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Criar Nova Ordem</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Nº Ordem
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="number"
-                  value={newOrder.order_number}
-                  onChange={(e) =>
-                    setNewOrder({
-                      ...newOrder,
-                      order_number: Number(e.target.value),
-                    })
-                  }
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Nº Material
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="number"
-                  value={newOrder.material_number}
-                  onChange={(e) =>
-                    setNewOrder({
-                      ...newOrder,
-                      material_number: Number(e.target.value),
-                    })
-                  }
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Data Início
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="date"
-                  value={newOrder.start_date}
-                  onChange={(e) =>
-                    setNewOrder({ ...newOrder, start_date: e.target.value })
-                  }
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Data Fim
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="date"
-                  value={newOrder.end_date}
-                  onChange={(e) =>
-                    setNewOrder({ ...newOrder, end_date: e.target.value })
-                  }
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row}>
-              <Form.Label column sm={4}>
-                Nº Peças
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="number"
-                  value={newOrder.num_pieces}
-                  onChange={(e) =>
-                    setNewOrder({
-                      ...newOrder,
-                      num_pieces: Number(e.target.value),
-                    })
-                  }
-                />
-              </Col>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleCreateOrder}>
-            Criar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Create New Order Component */}
+      <CreateNewOrder
+        show={showModal}
+        onClose={handleCloseModal}
+        onCreateSuccess={(createdOrder) => {
+          setOrders((prev) => [...prev, createdOrder]);
+          setFilteredOrders((prev) => [...prev, createdOrder]);
+        }}
+      />
     </div>
   );
 }

@@ -56,8 +56,7 @@ class OrderBase(BaseModel):
     num_pieces: int
 
 class OrderCreate(OrderBase):
-    pass
-
+    order_number: int
 class Order(OrderBase):
     order_number: int
     operations: List[Operation] = []

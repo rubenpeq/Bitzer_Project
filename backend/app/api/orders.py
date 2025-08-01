@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import OrderDB
-from db.schemas import Order
+from db.schemas import Order, OrderCreate
 from typing import List
 
 router = APIRouter()
@@ -25,3 +25,11 @@ def get_order(order_number: int, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+@router.post("/orders", response_model=Order)
+def create_order(order: OrderCreate, db: Session = Depends(get_db)):
+    new_order = OrderDB(**order.dict())
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+    return new_order
