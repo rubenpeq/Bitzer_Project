@@ -8,7 +8,7 @@
 
 This repository contains a full-stack application developed during an internship at Bitzer (Portugal). It provides a web-based interface for managing production logs and performing data analysis in real time.
 
-- **Frontend:** React, Vite, TypeScript
+- **Frontend:** React, Vite, TypeScript, Nginx
 - **Backend:** FastAPI, Uvicorn
 - **Database:** PostgreSQL
 
@@ -18,7 +18,7 @@ This repository contains a full-stack application developed during an internship
 
 ```mermaid
 flowchart LR
-  Tablet["Web Browser"] --> Frontend["React + Vite"]
+  Tablet["Web Browser"] --> Frontend["React + Vite (Nginx)"]
   Frontend --> Backend["FastAPI (Uvicorn)"]
   Backend --> Database["PostgreSQL"]
 ```
@@ -58,7 +58,13 @@ git clone ...
 cd ...
 ```
 
-### 2. Backend Setup
+💡 Tip: If you prefer to skip local setup and run the entire stack with Docker, jump ahead to the [📦 Deployment](#📦-Deployment) section.
+
+### 2. Database Setup
+
+1. ...
+
+### 3. Backend Setup
 
 1. Navigate to the backend folder:
 
@@ -78,13 +84,7 @@ cd ...
    docker compose up -d
    ```
 
-4. (Optional) Initialize or seed the database:
-
-   ```bash
-   python db/init_db.py
-   ```
-
-5. Run the FastAPI server:
+4. Run the FastAPI server:
 
    ```bash
    uvicorn main:app --reload --port 8000
@@ -92,7 +92,7 @@ cd ...
 
    - The API will be available at `http://localhost:8000`
 
-### 3. Frontend Setup
+### 4. Frontend Setup
 
 1. Open a new terminal and navigate to the frontend folder:
 
@@ -135,15 +135,39 @@ cd ...
 - **Frontend**: Define your API base URL in an `.env` file:
 
   ```ini
-  VITE_API_URL=http://localhost:8000
+  VITE_API_URL=http://host_url:8000
   ```
 
 - **Backend**: Configure your database connection in `.env` or environment variables:
 
   ```ini
-  DATABASE_URL=postgresql://user:password@localhost:PORT
+  DATABASE_URL=postgresql://user:password@container_name:PORT
   ```
 
 ---
 
 ## 📦 Deployment
+
+To run the full stack using Docker Compose (frontend + backend + database):
+
+1. Configure ``doker_compose.yml`` and setup [Environment Variables](#🌐-Environment-Variables).
+
+2. From the root of the project:
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Access the application:
+
+   - **Frontend:** [http://localhost:3000](http://localhost:3000)
+   - **API (Backend):** [http://localhost:8000](http://localhost:8000)
+   - **PostgreSQL Database:** exposed on port `5432` if you need external access
+
+   > 💡 Make sure ports `3000`, `8000`, and `5432` are open and not blocked by your firewall.
+
+4. To stop the containers:
+
+   ```bash
+   docker compose down
+   ```
