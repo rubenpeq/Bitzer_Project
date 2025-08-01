@@ -1,10 +1,12 @@
+# from backend/app, run ``python -m db.seed_data <number of orders>``
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import date, timedelta, time, datetime
 import random
 import sys
 
-from models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType
+from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType
 
 # Check if an argument was passed
 if len(sys.argv) < 2:
@@ -18,7 +20,6 @@ except ValueError:
     sys.exit(1)
 
 print(f"Seeding {num_orders} orders...")
-# your seeding logic here
 
 # --- Configure your DB URL here ---
 DATABASE_URL = "postgresql://bitzer:bitzer123@localhost/orders_db"
