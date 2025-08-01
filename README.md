@@ -58,7 +58,7 @@ git clone ...
 cd ...
 ```
 
-💡 Tip: If you prefer to skip local setup and run the entire stack with Docker, jump ahead to the [📦 Deployment](#-deployment) section.
+> 💡 If you prefer to skip local setup and run the entire stack with Docker, jump ahead to the [📦 Deployment](#-deployment) section.
 
 ### 2. Database Setup
 
