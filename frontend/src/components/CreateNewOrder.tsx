@@ -13,6 +13,14 @@ type Order = OrderCreate & {
   order_number: number;
 };
 
+type OrderCreateStr = {
+  order_number: string;
+  material_number: string;
+  start_date: string;
+  end_date: string;
+  num_pieces: string;
+};
+
 type Props = {
   show: boolean;
   onClose: () => void;
@@ -24,12 +32,12 @@ export default function CreateNewOrder({
   onClose,
   onCreateSuccess,
 }: Props) {
-  const [formData, setFormData] = useState<OrderCreate>({
-    order_number: 0,
-    material_number: 0,
+  const [formData, setFormData] = useState<OrderCreateStr>({
+    order_number: "",
+    material_number: "",
     start_date: "",
     end_date: "",
-    num_pieces: 0,
+    num_pieces: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -37,15 +45,57 @@ export default function CreateNewOrder({
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
+  const handleChange = (field: keyof OrderCreateStr, value: string) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
   const handleCreate = async () => {
     setLoading(true);
     setError(null);
+
+    const order_number_num = Number(formData.order_number);
+    const material_number_num = Number(formData.material_number);
+    const num_pieces_num = Number(formData.num_pieces);
+
+    if (!formData.order_number.trim() || isNaN(order_number_num) || order_number_num <= 0) {
+      setError("Número da ordem inválido.");
+      setLoading(false);
+      return;
+    }
+    if (!formData.material_number.trim() || isNaN(material_number_num) || material_number_num <= 0) {
+      setError("Número do material inválido.");
+      setLoading(false);
+      return;
+    }
+    if (!formData.num_pieces.trim() || isNaN(num_pieces_num) || num_pieces_num <= 0) {
+      setError("Número de peças inválido.");
+      setLoading(false);
+      return;
+    }
+    if (!formData.start_date.trim()) {
+      setError("Data de início é obrigatória.");
+      setLoading(false);
+      return;
+    }
+    if (!formData.end_date.trim()) {
+      setError("Data de fim é obrigatória.");
+      setLoading(false);
+      return;
+    }
+
+    const payload: OrderCreate = {
+      order_number: order_number_num,
+      material_number: material_number_num,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      num_pieces: num_pieces_num,
+    };
 
     try {
       const response = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -57,21 +107,17 @@ export default function CreateNewOrder({
       onCreateSuccess(createdOrder);
       onClose();
       setFormData({
-        order_number: 0,
-        material_number: 0,
+        order_number: "",
+        material_number: "",
         start_date: "",
         end_date: "",
-        num_pieces: 0,
+        num_pieces: "",
       });
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (field: keyof OrderCreate, value: string | number) => {
-    setFormData({ ...formData, [field]: value });
   };
 
   return (
@@ -91,9 +137,7 @@ export default function CreateNewOrder({
               <Form.Control
                 type="number"
                 value={formData.order_number}
-                onChange={(e) =>
-                  handleChange("order_number", Number(e.target.value))
-                }
+                onChange={(e) => handleChange("order_number", e.target.value)}
               />
             </Col>
           </Form.Group>
@@ -106,9 +150,7 @@ export default function CreateNewOrder({
               <Form.Control
                 type="number"
                 value={formData.material_number}
-                onChange={(e) =>
-                  handleChange("material_number", Number(e.target.value))
-                }
+                onChange={(e) => handleChange("material_number", e.target.value)}
               />
             </Col>
           </Form.Group>
@@ -147,9 +189,7 @@ export default function CreateNewOrder({
               <Form.Control
                 type="number"
                 value={formData.num_pieces}
-                onChange={(e) =>
-                  handleChange("num_pieces", Number(e.target.value))
-                }
+                onChange={(e) => handleChange("num_pieces", e.target.value)}
               />
             </Col>
           </Form.Group>
