@@ -58,7 +58,7 @@ git clone ...
 cd ...
 ```
 
-💡 Tip: If you prefer to skip local setup and run the entire stack with Docker, jump ahead to the [📦 Deployment](#📦-Deployment) section.
+💡 Tip: If you prefer to skip local setup and run the entire stack with Docker, jump ahead to the [📦 Deployment](#deployment) section.
 
 ### 2. Database Setup
 
@@ -150,7 +150,7 @@ cd ...
 
 To run the full stack using Docker Compose (frontend + backend + database):
 
-1. Configure ``doker_compose.yml`` and setup [Environment Variables](#🌐-Environment-Variables).
+1. Configure ``doker_compose.yml`` and setup [Environment Variables](#environment-variables).
 
 2. From the root of the project:
 
