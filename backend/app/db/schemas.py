@@ -10,8 +10,8 @@ class ProcessType(str, enum.Enum):
     PROCESSING = "processing"
 
 class MachineType(str, enum.Enum):
-    CNC = "cnc"
-    CONVENTIONAL = "conventional"
+    CNC = "CNC"
+    CONVENTIONAL = "CONVENTIONAL"
 
 # Task Schemas
 class TaskBase(BaseModel):

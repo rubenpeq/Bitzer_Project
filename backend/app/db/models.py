@@ -13,8 +13,8 @@ class ProcessType(enum.Enum):
     PROCESSING = "processing"
 
 class MachineType(enum.Enum):
-    CNC = "cnc"
-    CONVENTIONAL = "conventional"
+    CNC = "CNC"
+    CONVENTIONAL = "CONVENTIONAL"
 
 
 ### Database Tables ###

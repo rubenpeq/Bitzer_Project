@@ -1,17 +1,23 @@
-// src/routes/index.tsx
 import { Routes, Route } from "react-router-dom";
 import Home from "../pages/Home";
-import Orders from "../pages/Orders";
-import Operations from "../pages/Operations";
-import Tasks from "../pages/Task";
+import OrderDetail from "../pages/Orders";
+import OperationDetail from "../pages/Operations";
+import TaskList from "../pages/Task";
 
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Orders list */}
       <Route path="/" element={<Home />} />
-      <Route path="/order/:orderNumber" element={<Orders />} />
-      <Route path="/operation/:orderNumber/:operationNumber" element={<Operations />} />
-      <Route path="/task" element={<Tasks />} />
+
+      {/* Order detail + operations */}
+      <Route path="/order/:orderNumber" element={<OrderDetail />} />
+
+      {/* Operation detail + tasks */}
+      <Route path="/operation/:operationId" element={<OperationDetail />} />
+
+      {/* Task detail */}
+      <Route path="/task/:taskId" element={<TaskList />} />
     </Routes>
   );
 }

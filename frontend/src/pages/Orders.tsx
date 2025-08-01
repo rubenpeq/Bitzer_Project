@@ -1,17 +1,18 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { ArrowLeft } from "react-bootstrap-icons";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import {
   Table,
   Spinner,
   Alert,
   Button,
-  Modal,
   Row,
   Col,
   Form,
+  Card,
 } from "react-bootstrap";
+import { ArrowLeft } from "react-bootstrap-icons";
+
+import CreateNewOperation from "../components/CreateNewOperation";
 
 type Order = {
   order_number: number;
@@ -22,63 +23,110 @@ type Order = {
 };
 
 type Operation = {
-  operation_code: string;
+  operation_code: number;
   machine_type: string;
 };
 
 export default function OrderDetail() {
-  const navigate = useNavigate();
   const { orderNumber } = useParams<{ orderNumber: string }>();
+  const navigate = useNavigate();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [filteredOps, setFilteredOps] = useState<Operation[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Operation;
+    direction: "asc" | "desc";
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [newOperation, setNewOperation] = useState<Operation>({
-    operation_code: "",
-    machine_type: "",
-  });
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
+  // --- Load Order and Operations ---
   useEffect(() => {
     setLoading(true);
 
-    // Fetch the specific order
-    fetch(`${API_URL}/orders/${orderNumber}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch order");
+    Promise.all([
+      fetch(`${API_URL}/orders/${orderNumber}`).then((res) => {
+        if (!res.ok) throw new Error("Erro ao buscar ordem");
         return res.json();
-      })
-      .then((data) => setOrder(data))
-      .catch(console.error);
-
-    // Fetch operations for the order
-    fetch(`${API_URL}/orders/${orderNumber}/operations`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch operations");
+      }),
+      fetch(`${API_URL}/orders/${orderNumber}/operations`).then((res) => {
+        if (!res.ok) throw new Error("Erro ao buscar operações");
         return res.json();
+      }),
+    ])
+      .then(([orderData, operationsData]) => {
+        setOrder(orderData);
+        setOperations(operationsData);
+        setFilteredOps(operationsData);
       })
-      .then((data) => setOperations(data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [orderNumber]);
 
-  const handleShowModal = () => setShowModal(true);
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setNewOperation({ operation_code: "", machine_type: "" });
+  // --- Search Filtering ---
+  useEffect(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      setFilteredOps(operations);
+    } else {
+      const filtered = operations.filter(
+        (op) =>
+          op.operation_code.toString().includes(term) ||
+          op.machine_type.toLowerCase().includes(term)
+      );
+      setFilteredOps(filtered);
+    }
+  }, [searchTerm, operations]);
+
+  // --- Sorting Logic ---
+  const sortedOperations = useMemo(() => {
+    if (!sortConfig) return filteredOps;
+
+    return [...filteredOps].sort((a, b) => {
+      const { key, direction } = sortConfig;
+      let aVal = a[key]?.toString().toLowerCase();
+      let bVal = b[key]?.toString().toLowerCase();
+
+      if (aVal < bVal) return direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredOps, sortConfig]);
+
+  const handleSort = (key: keyof Operation) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig?.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
   };
 
-  const handleCreateOperation = () => {
+  const handleCreateSuccess = (newOperation: Operation) => {
     setOperations((prev) => [...prev, newOperation]);
-    handleCloseModal();
+    setFilteredOps((prev) => [...prev, newOperation]);
+    setShowModal(false);
   };
 
-  if (loading) return <Spinner animation="border" />;
+  if (loading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ height: "60vh" }}
+      >
+        <Spinner animation="border" />
+      </div>
+    );
+  }
+
   if (!order) return <Alert variant="danger">Ordem não encontrada</Alert>;
 
   return (
-    <div className="p-3">
+    <div className="p-3 position-relative" style={{ height: "100%" }}>
       <Button
         variant="light"
         className="mb-3 d-flex align-items-center"
@@ -87,106 +135,103 @@ export default function OrderDetail() {
         <ArrowLeft className="me-2" />
         Voltar
       </Button>
-      <h4>Detalhes da Ordem Nº {order.order_number}</h4>
-      <p>
-        <strong>Nº Material:</strong> {order.material_number}
-      </p>
-      <p>
-        <strong>Data Início:</strong> {order.start_date}
-      </p>
-      <p>
-        <strong>Data Fim:</strong> {order.end_date}
-      </p>
-      <p>
-        <strong>Nº Peças:</strong> {order.num_pieces}
-      </p>
 
-      <h5 className="mt-4">Operações</h5>
-      {operations.length === 0 ? (
+      {/* Order Summary Cards */}
+      <Row className="mb-4 gx-3 justify-content-center text-center">
+        {(
+          [
+            { label: "Nº Ordem", value: order.order_number },
+            { label: "Nº Material", value: order.material_number },
+            { label: "Data Início", value: order.start_date },
+            { label: "Data Fim", value: order.end_date },
+            { label: "Nº Peças", value: order.num_pieces },
+          ] as const
+        ).map(({ label, value }, idx) => (
+          <Col key={idx} xs={12} sm={6} md={2} className="mb-3">
+            <Card className="p-3">
+              <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
+              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                {value}
+              </Card.Text>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Search Field */}
+      <Form.Control
+        type="search"
+        placeholder="Pesquisar operações..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="mb-3"
+      />
+
+      {/* Operations Table */}
+      {sortedOperations.length === 0 ? (
         <Alert variant="warning">Nenhuma operação encontrada.</Alert>
       ) : (
-        <Table striped bordered hover responsive>
-          <thead>
-            <tr>
-              <th>Código Operação</th>
-              <th>Tipo de Máquina</th>
-            </tr>
-          </thead>
-          <tbody>
-            {operations.map((op, index) => (
-              <tr key={op.operation_code || index}>
-                <td>{op.operation_code}</td>
-                <td>{op.machine_type}</td>
+        <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+          <Table striped bordered hover responsive>
+            <thead>
+              <tr>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("operation_code")}
+                >
+                  Código Operação{" "}
+                  {sortConfig?.key === "operation_code"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("machine_type")}
+                >
+                  Tipo de Máquina{" "}
+                  {sortConfig?.key === "machine_type"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {sortedOperations.map((op, index) => (
+                <tr
+                  key={op.operation_code ?? index}
+                  style={{ cursor: "default" }}
+                >
+                  <td>{op.operation_code}</td>
+                  <td>{op.machine_type}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
 
+      {/* Floating Action Button */}
       <Button
-        variant="primary"
+        variant="success"
         className="position-fixed"
+        size="lg"
         style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
-        onClick={handleShowModal}
+        onClick={() => setShowModal(true)}
       >
-        + Criar Operação
+        + Nova Operação
       </Button>
 
-      {/* Modal to create operation */}
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Nova Operação</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Código
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Control
-                  type="text"
-                  value={newOperation.operation_code}
-                  onChange={(e) =>
-                    setNewOperation({
-                      ...newOperation,
-                      operation_code: e.target.value,
-                    })
-                  }
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm={4}>
-                Tipo de Máquina
-              </Form.Label>
-              <Col sm={8}>
-                <Form.Select
-                  value={newOperation.machine_type}
-                  onChange={(e) =>
-                    setNewOperation({
-                      ...newOperation,
-                      machine_type: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Selecione o tipo</option>
-                  <option value="CNC">CNC</option>
-                  <option value="Convencional">Convencional</option>
-                </Form.Select>
-              </Col>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleCreateOperation}>
-            Criar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Modal */}
+      <CreateNewOperation
+        orderNumber={Number(orderNumber)}
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        onCreateSuccess={handleCreateSuccess}
+      />
     </div>
   );
 }
