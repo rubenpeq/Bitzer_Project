@@ -55,7 +55,7 @@ def get_operation_id(order_number: int, operation_code: int, db: Session = Depen
         raise HTTPException(status_code=404, detail="Operation not found")
     return operation.id
 
-@router.post("/operations", response_model=Operation, tags=["Operations"])
+@router.post("/operations", response_model=Operation, tags=["Operations"], summary="Adds new operation to database")
 def create_operation(operation: OperationCreate, db: Session = Depends(get_db)):
     existing = (
         db.query(OperationDB)
