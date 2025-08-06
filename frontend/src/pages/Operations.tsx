@@ -16,7 +16,7 @@ import CreateTask, { type Task as TaskType } from "../components/CreateTask";
 
 type Operation = {
   id: number;
-  operation_code: string;
+  operation_code: number;
   machine_type: string;
   order_number: number;
 };
@@ -45,13 +45,15 @@ export default function OperationDetail() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     Promise.all([
-      fetch(`${API_URL}/operations/${operationId}`).then((res) => {
+      fetch(`${API_URL}/operation/${operationId}`).then((res) => {
         if (!res.ok) throw new Error("Erro ao buscar operação");
         return res.json();
       }),
@@ -65,10 +67,12 @@ export default function OperationDetail() {
         setTasks(taskData);
         setFilteredTasks(taskData);
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setError(err.message || "Erro ao buscar dados");
+      })
       .finally(() => setLoading(false));
-  }, [operationId]);
-
+  }, [operationId, API_URL]);
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return setFilteredTasks(tasks);
@@ -79,6 +83,9 @@ export default function OperationDetail() {
       )
     );
   }, [searchTerm, tasks]);
+
+  // Double click to task details
+  const handleRowDoubleClick = () => 0; // TODO: Finish go to tasks page
 
   const sortedTasks = useMemo(() => {
     if (!sortConfig) return filteredTasks;
@@ -116,6 +123,8 @@ export default function OperationDetail() {
         <Spinner animation="border" />
       </div>
     );
+
+  if (error) return <Alert variant="danger">{error}</Alert>;
 
   if (!operation)
     return <Alert variant="danger">Operação não encontrada</Alert>;
@@ -193,7 +202,11 @@ export default function OperationDetail() {
             </thead>
             <tbody>
               {sortedTasks.map((task) => (
-                <tr key={task.id}>
+                <tr
+                  key={task.id}
+                  onDoubleClick={() => handleRowDoubleClick()}
+                  style={{ cursor: "pointer" }}
+                >
                   <td>{task.process_type}</td>
                   <td>{task.date}</td>
                   <td>{task.start_time}</td>

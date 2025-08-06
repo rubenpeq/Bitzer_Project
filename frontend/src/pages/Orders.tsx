@@ -67,6 +67,28 @@ export default function OrderDetail() {
       .finally(() => setLoading(false));
   }, [orderNumber]);
 
+  // Double click to operation details
+  const handleRowDoubleClick = async (
+    order_number: number,
+    op_code: number
+  ) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/operations/get_id?order_number=${order_number}&operation_code=${op_code}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch operation ID: ${response.statusText}`);
+      }
+
+      const operationId = await response.json(); // response is just a number
+
+      navigate(`/operation/${operationId}`);
+    } catch (error) {
+      console.error("Error fetching operation ID:", error);
+    }
+  };
+
   // --- Search Filtering ---
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -203,7 +225,10 @@ export default function OrderDetail() {
               {sortedOperations.map((op, index) => (
                 <tr
                   key={op.operation_code ?? index}
-                  style={{ cursor: "default" }}
+                  onDoubleClick={() =>
+                    handleRowDoubleClick(Number(orderNumber), op.operation_code)
+                  }
+                  style={{ cursor: "pointer" }}
                 >
                   <td>{op.operation_code}</td>
                   <td>{op.machine_type}</td>

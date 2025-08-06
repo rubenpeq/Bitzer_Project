@@ -25,3 +25,15 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
     if not task:
         raise HTTPException(status_code=404, detail="Operation not found")
     return task
+
+@router.get(
+    "/operations/{operation_id}/tasks",
+    response_model=List[Task],
+    tags=["Operations"],
+    summary="Lists all tasks for a given operation ID.",
+)
+def get_tasks_for_operation(operation_id: int, db: Session = Depends(get_db)):
+    tasks = db.query(TaskDB).filter(TaskDB.operation_id == operation_id).all()
+    if tasks is None:
+        raise HTTPException(status_code=404, detail="No tasks found for this operation")
+    return tasks

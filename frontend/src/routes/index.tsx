@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Home from "../pages/Home";
 import OrderDetail from "../pages/Orders";
 import OperationDetail from "../pages/Operations";
-import TaskList from "../pages/Task";
+import Task from "../pages/Task";
 
 export default function AppRoutes() {
   return (
@@ -17,7 +17,7 @@ export default function AppRoutes() {
       <Route path="/operation/:operationId" element={<OperationDetail />} />
 
       {/* Task detail */}
-      <Route path="/task/:taskId" element={<TaskList />} />
+      <Route path="/task/:taskId" element={<Task />} />
     </Routes>
   );
 }
