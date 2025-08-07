@@ -112,6 +112,15 @@ export default function Home() {
     navigate(`/order/${orderNumber}`);
   };
 
+  // Table Headers
+  const orderHeaders: { key: keyof Order; label: string }[] = [
+    { key: "order_number", label: "Nº Ordem" },
+    { key: "material_number", label: "Nº Material" },
+    { key: "start_date", label: "Data Início" },
+    { key: "end_date", label: "Data Fim" },
+    { key: "num_pieces", label: "Nº Peças" },
+  ];
+
   // Create new order modal
   const handleShowModal = () => setShowModal(true);
   const handleCloseModal = () => {
@@ -142,62 +151,20 @@ export default function Home() {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("order_number")}
-                >
-                  Nº Ordem{" "}
-                  {sortConfig?.key === "order_number"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
-
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("material_number")}
-                >
-                  Nº Material{" "}
-                  {sortConfig?.key === "material_number"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("start_date")}
-                >
-                  Data Inicio{" "}
-                  {sortConfig?.key === "start_date"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("end_date")}
-                >
-                  Data Fim{" "}
-                  {sortConfig?.key === "end_date"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("num_pieces")}
-                >
-                  Nº Peças{" "}
-                  {sortConfig?.key === "num_pieces"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
+                {orderHeaders.map(({ key, label }) => (
+                  <th
+                    key={key}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleSort(key)}
+                  >
+                    {label}
+                    {sortConfig?.key === key
+                      ? sortConfig.direction === "asc"
+                        ? "▲"
+                        : "▼"
+                      : ""}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>

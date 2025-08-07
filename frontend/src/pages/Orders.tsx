@@ -89,6 +89,12 @@ export default function OrderDetail() {
     }
   };
 
+  // Table Headers
+  const operationHeaders: { key: keyof Operation; label: string }[] = [
+    { key: "operation_code", label: "Código Operação" },
+    { key: "machine_type", label: "Tipo de Máquina" },
+  ];
+
   // --- Search Filtering ---
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -197,28 +203,20 @@ export default function OrderDetail() {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("operation_code")}
-                >
-                  Código Operação{" "}
-                  {sortConfig?.key === "operation_code"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
-                <th
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSort("machine_type")}
-                >
-                  Tipo de Máquina{" "}
-                  {sortConfig?.key === "machine_type"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : ""}
-                </th>
+                {operationHeaders.map(({ key, label }) => (
+                  <th
+                    key={key}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleSort(key)}
+                  >
+                    {label}
+                    {sortConfig?.key === key
+                      ? sortConfig.direction === "asc"
+                        ? "▲"
+                        : "▼"
+                      : ""}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>

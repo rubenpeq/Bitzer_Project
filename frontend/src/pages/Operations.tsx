@@ -87,6 +87,16 @@ export default function OperationDetail() {
   // Double click to task details
   const handleRowDoubleClick = () => 0; // TODO: Finish go to tasks page
 
+  // Table Headers
+  const taskHeaders: { key: keyof Task; label: string }[] = [
+    { key: "process_type", label: "Tipo de Processo" },
+    { key: "date", label: "Data" },
+    { key: "start_time", label: "Início" },
+    { key: "end_time", label: "Fim" },
+    { key: "good_pieces", label: "Peças Boas" },
+    { key: "bad_pieces", label: "Peças Defetivas" },
+  ];
+
   const sortedTasks = useMemo(() => {
     if (!sortConfig) return filteredTasks;
     return [...filteredTasks].sort((a, b) => {
@@ -175,22 +185,13 @@ export default function OperationDetail() {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                {[
-                  "process_type",
-                  "date",
-                  "start_time",
-                  "end_time",
-                  "good_pieces",
-                  "bad_pieces",
-                ].map((key) => (
+                {taskHeaders.map(({ key, label }) => (
                   <th
                     key={key}
                     style={{ cursor: "pointer" }}
-                    onClick={() => handleSort(key as keyof Task)}
+                    onClick={() => handleSort(key)}
                   >
-                    {key
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase())}
+                    {label}
                     {sortConfig?.key === key
                       ? sortConfig.direction === "asc"
                         ? " ▲"
@@ -200,6 +201,7 @@ export default function OperationDetail() {
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {sortedTasks.map((task) => (
                 <tr
