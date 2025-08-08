@@ -11,32 +11,15 @@ import {
   Form,
 } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-
-import CreateTask, { type Task as TaskType } from "../components/CreateTask";
-
-type Operation = {
-  id: number;
-  operation_code: number;
-  machine_type: string;
-  order_number: number;
-};
-
-type Task = {
-  id: number;
-  process_type: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  good_pieces: number;
-  bad_pieces: number;
-};
+import type { Operation, Task } from "../utils/Types";
+import CreateTask from "../components/CreateTask";
 
 export default function OperationDetail() {
   const { operationId } = useParams<{ operationId: string }>();
   const navigate = useNavigate();
 
   const [operation, setOperation] = useState<Operation | null>(null);
-  const [tasks, setTasks] = useState<TaskType[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -49,9 +32,29 @@ export default function OperationDetail() {
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
+  // normalize incoming task object (backend may use goodpcs/badpcs)
+  const normalizeTask = (t: any): Task => ({
+    id: t.id,
+    operation_id: t.operation_id ?? t.operationId ?? Number(operationId), // Added operation_id
+    process_type: t.process_type,
+    date: t.date,
+    start_time: t.start_time ?? t.startTime ?? null,
+    end_time: t.end_time ?? t.endTime ?? null,
+    // prefer goodpcs/badpcs from backend, fallback to good_pieces/bad_pieces if present
+    good_pieces:
+      t.goodpcs ??
+      t.good_pieces ??
+      (typeof t.goodPieces === "number" ? t.goodPieces : null),
+    bad_pieces:
+      t.badpcs ??
+      t.bad_pieces ??
+      (typeof t.badPieces === "number" ? t.badPieces : null),
+  });
+
   useEffect(() => {
     setLoading(true);
     setError(null);
+
     Promise.all([
       fetch(`${API_URL}/operation/${operationId}`).then((res) => {
         if (!res.ok) throw new Error("Erro ao buscar operação");
@@ -64,8 +67,12 @@ export default function OperationDetail() {
     ])
       .then(([operationData, taskData]) => {
         setOperation(operationData);
-        setTasks(taskData);
-        setFilteredTasks(taskData);
+        // normalize tasks from backend to UI shape
+        const normalized: Task[] = (taskData ?? []).map((t: any) =>
+          normalizeTask(t)
+        );
+        setTasks(normalized);
+        setFilteredTasks(normalized);
       })
       .catch((err) => {
         console.error(err);
@@ -73,19 +80,23 @@ export default function OperationDetail() {
       })
       .finally(() => setLoading(false));
   }, [operationId, API_URL]);
+
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return setFilteredTasks(tasks);
     setFilteredTasks(
       tasks.filter(
         (t) =>
-          t.process_type.toLowerCase().includes(term) || t.date.includes(term)
+          (t.process_type ?? "").toLowerCase().includes(term) ||
+          (t.date ?? "").includes(term)
       )
     );
   }, [searchTerm, tasks]);
 
   // Double click to task details
-  const handleRowDoubleClick = () => 0; // TODO: Finish go to tasks page
+  const handleRowDoubleClick = (taskId: number) => {
+    navigate(`/task/${taskId}`);
+  };
 
   // Table Headers
   const taskHeaders: { key: keyof Task; label: string }[] = [
@@ -101,8 +112,8 @@ export default function OperationDetail() {
     if (!sortConfig) return filteredTasks;
     return [...filteredTasks].sort((a, b) => {
       const { key, direction } = sortConfig;
-      let aVal = a[key]?.toString().toLowerCase();
-      let bVal = b[key]?.toString().toLowerCase();
+      const aVal = (a[key] ?? "").toString().toLowerCase();
+      const bVal = (b[key] ?? "").toString().toLowerCase();
 
       if (aVal < bVal) return direction === "asc" ? -1 : 1;
       if (aVal > bVal) return direction === "asc" ? 1 : -1;
@@ -118,9 +129,11 @@ export default function OperationDetail() {
     setSortConfig({ key, direction });
   };
 
-  const handleCreateSuccess = (newTask: Task) => {
-    setTasks((prev) => [...prev, newTask]);
-    setFilteredTasks((prev) => [...prev, newTask]);
+  // createdTaskRaw is whatever backend returned; normalize it before using
+  const handleCreateSuccess = (createdTaskRaw: Task | any) => {
+    const normalized = normalizeTask(createdTaskRaw);
+    setTasks((prev) => [...prev, normalized]);
+    setFilteredTasks((prev) => [...prev, normalized]);
     setShowModal(false);
   };
 
@@ -206,15 +219,15 @@ export default function OperationDetail() {
               {sortedTasks.map((task) => (
                 <tr
                   key={task.id}
-                  onDoubleClick={() => handleRowDoubleClick()}
+                  onDoubleClick={() => handleRowDoubleClick(task.id)}
                   style={{ cursor: "pointer" }}
                 >
                   <td>{task.process_type}</td>
                   <td>{task.date}</td>
-                  <td>{task.start_time}</td>
-                  <td>{task.end_time}</td>
-                  <td>{task.good_pieces}</td>
-                  <td>{task.bad_pieces}</td>
+                  <td>{task.start_time ?? "--:--:--"}</td>
+                  <td>{task.end_time ?? "--:--:--"}</td>
+                  <td>{task.good_pieces ?? "-"}</td>
+                  <td>{task.bad_pieces ?? "-"}</td>
                 </tr>
               ))}
             </tbody>

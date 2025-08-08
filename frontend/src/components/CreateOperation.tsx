@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
-
-type Operation = {
-  order_number: number;
-  operation_code: number;
-  machine_type: string;
-};
+import type { Operation } from "../utils/Types";
 
 type CreateNewOperationProps = {
   orderNumber: number;
@@ -49,9 +44,7 @@ export default function CreateNewOperation({
     try {
       const res = await fetch(`${API_URL}/operations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -60,7 +53,7 @@ export default function CreateNewOperation({
         throw new Error(errorData.detail || "Erro ao criar operação.");
       }
 
-      const createdOperation = await res.json();
+      const createdOperation: Operation = await res.json();
       onCreateSuccess(createdOperation);
 
       // Reset form
@@ -98,10 +91,11 @@ export default function CreateNewOperation({
               <Form.Control
                 type="number"
                 value={operation_code}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setOperationCode(val === "" ? "" : Number(val));
-                }}
+                onChange={(e) =>
+                  setOperationCode(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
               />
             </Col>
           </Form.Group>

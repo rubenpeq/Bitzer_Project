@@ -11,21 +11,8 @@ import {
   Card,
 } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-
-import CreateNewOperation from "../components/CreateNewOperation";
-
-type Order = {
-  order_number: number;
-  material_number: number;
-  start_date: string;
-  end_date: string;
-  num_pieces: number;
-};
-
-type Operation = {
-  operation_code: number;
-  machine_type: string;
-};
+import CreateNewOperation from "../components/CreateOperation";
+import type { Order, Operation } from "../utils/Types";
 
 export default function OrderDetail() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -89,7 +76,7 @@ export default function OrderDetail() {
     }
   };
 
-  // Table Headers
+  // --- Table Headers ---
   const operationHeaders: { key: keyof Operation; label: string }[] = [
     { key: "operation_code", label: "Código Operação" },
     { key: "machine_type", label: "Tipo de Máquina" },
