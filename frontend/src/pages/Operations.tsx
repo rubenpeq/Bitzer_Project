@@ -11,7 +11,7 @@ import {
   Form,
 } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-import type { Operation, Task } from "../utils/Types";
+import { processTypeLabels, type Operation, type Task } from "../utils/Types";
 import CreateTask from "../components/CreateTask";
 
 export default function OperationDetail() {
@@ -32,25 +32,6 @@ export default function OperationDetail() {
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
-  // normalize incoming task object (backend may use goodpcs/badpcs)
-  const normalizeTask = (t: any): Task => ({
-    id: t.id,
-    operation_id: t.operation_id ?? t.operationId ?? Number(operationId), // Added operation_id
-    process_type: t.process_type,
-    date: t.date,
-    start_time: t.start_time ?? t.startTime ?? null,
-    end_time: t.end_time ?? t.endTime ?? null,
-    // prefer goodpcs/badpcs from backend, fallback to good_pieces/bad_pieces if present
-    good_pieces:
-      t.goodpcs ??
-      t.good_pieces ??
-      (typeof t.goodPieces === "number" ? t.goodPieces : null),
-    bad_pieces:
-      t.badpcs ??
-      t.bad_pieces ??
-      (typeof t.badPieces === "number" ? t.badPieces : null),
-  });
-
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -69,7 +50,7 @@ export default function OperationDetail() {
         setOperation(operationData);
         // normalize tasks from backend to UI shape
         const normalized: Task[] = (taskData ?? []).map((t: any) =>
-          normalizeTask(t)
+          t
         );
         setTasks(normalized);
         setFilteredTasks(normalized);
@@ -131,7 +112,7 @@ export default function OperationDetail() {
 
   // createdTaskRaw is whatever backend returned; normalize it before using
   const handleCreateSuccess = (createdTaskRaw: Task | any) => {
-    const normalized = normalizeTask(createdTaskRaw);
+    const normalized = createdTaskRaw;
     setTasks((prev) => [...prev, normalized]);
     setFilteredTasks((prev) => [...prev, normalized]);
     setShowModal(false);
@@ -222,7 +203,7 @@ export default function OperationDetail() {
                   onDoubleClick={() => handleRowDoubleClick(task.id)}
                   style={{ cursor: "pointer" }}
                 >
-                  <td>{task.process_type}</td>
+                  <td>{processTypeLabels[task.process_type]}</td>
                   <td>{task.date}</td>
                   <td>{task.start_time ?? "--:--:--"}</td>
                   <td>{task.end_time ?? "--:--:--"}</td>

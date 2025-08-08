@@ -69,7 +69,6 @@ export default function CreateTask({
     setLoading(true);
     try {
       const payload = cleanPayload(task);
-      console.log(payload)
 
       const res = await fetch(`${API_URL}/create-task/${operationId}`, {
         method: "POST",

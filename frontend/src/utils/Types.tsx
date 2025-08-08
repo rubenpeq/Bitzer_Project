@@ -11,7 +11,7 @@ export type Operation = {
 export type Task = {
   id: number;
   operation_id: number;
-  process_type: "prep" | "qc" | "processing" | string;
+  process_type: "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING" | string;
   date: string; // YYYY-MM-DD
   start_time?: string | null; // HH:MM:SS or null
   end_time?: string | null; // HH:MM:SS or null
@@ -48,9 +48,9 @@ export type OrderCreateStr = {
 
 // Human-friendly labels for process types
 export const processTypeLabels: Record<string, string> = {
-  qc: "Controlo de Qualidade",
-  processing: "Processamento",
-  prep: "Preparação de Máquina",
+  QUALITY_CONTROL: "Controlo de Qualidade",
+  PROCESSING: "Processamento",
+  PREPARATION: "Preparação de Máquina",
 };
 
 // Utility: normalize a task object that may come from the backend
