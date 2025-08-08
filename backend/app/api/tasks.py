@@ -69,7 +69,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     return None
 
 @router.put(
-    "/task/{task_id}",
+    "/update-task/{task_id}",
     response_model=Task,
     tags=["Tasks"],
     summary="Update a task by its ID.",
@@ -84,7 +84,7 @@ def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Update fields
-    for field, value in task_in.dict(exclude_unset=True).items():
+    for field, value in task_in.model_dump(exclude_unset=True).items():
         setattr(task, field, value)
 
     db.commit()

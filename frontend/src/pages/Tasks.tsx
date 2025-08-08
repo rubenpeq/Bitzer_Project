@@ -1,14 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button, Spinner, Alert, Row, Col, Card, Form } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-import type { Task } from "../utils/Types";
-
-const processTypeLabels: Record<string, string> = {
-  qc: "Controlo de Qualidade",
-  processing: "Processamento",
-  prep: "Preparação de Máquina",
-};
+import { type Task, processTypeLabels } from "../utils/Types";
 
 /** --- Helpers --- **/
 const formatLocalTime = (d: Date) => {
@@ -17,6 +11,46 @@ const formatLocalTime = (d: Date) => {
   const ss = String(d.getSeconds()).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
 };
+
+// Format seconds to HH:MM:SS
+const formatDuration = (seconds: number) => {
+  const hh = Math.floor(seconds / 3600);
+  const mm = Math.floor((seconds % 3600) / 60);
+  const ss = seconds % 60;
+  return [hh, mm, ss].map((v) => String(v).padStart(2, "0")).join(":");
+};
+
+// Parse "HH:MM:SS" or "HH:MM:SS.sss" to seconds since midnight
+// Accepts string | null | undefined to satisfy TS strictness
+const parseTimeToSeconds = (timeStr?: string | null): number => {
+  if (!timeStr) return 0;
+  const main = String(timeStr).split(".")[0]; // drop milliseconds if present
+  const parts = main.split(":").map((p) => Number(p));
+  if (parts.length < 3) return 0;
+  const [hh, mm, ss] = parts;
+  if ([hh, mm, ss].some((n) => Number.isNaN(n))) return 0;
+  return hh * 3600 + mm * 60 + ss;
+};
+
+// Map backend variations to frontend Task
+const mapBackendToTask = (data: any): Task => ({
+  id: data.id,
+  operation_id: data.operation_id ?? data.operationId ?? data.operation_id,
+  process_type: data.process_type ?? data.processType ?? "",
+  date: data.date ?? "",
+  start_time: data.start_time ?? data.startTime ?? null,
+  end_time: data.end_time ?? data.endTime ?? null,
+  good_pieces:
+    data.good_pieces ??
+    data.goodpcs ??
+    (typeof data.goodPieces === "number" ? data.goodPieces : null) ??
+    null,
+  bad_pieces:
+    data.bad_pieces ??
+    data.badpcs ??
+    (typeof data.badPieces === "number" ? data.badPieces : null) ??
+    null,
+});
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -29,8 +63,13 @@ export default function TaskDetail() {
   const [goodPiecesInput, setGoodPiecesInput] = useState<number | "">("");
   const [badPiecesInput, setBadPiecesInput] = useState<number | "">("");
 
+  // timer state
+  const [timerSeconds, setTimerSeconds] = useState<number>(0);
+  const timerRef = useRef<number | null>(null);
+
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
+  // Load task
   useEffect(() => {
     if (!taskId) {
       setError("Task ID inválido");
@@ -49,22 +88,26 @@ export default function TaskDetail() {
           throw new Error(`Erro ao buscar tarefa: ${res.status} ${text}`);
         }
         const data = await res.json();
-
-        // Map backend field names to frontend Task shape
-        const mapped: Task = {
-          id: data.id,
-          operation_id: data.operation_id,
-          process_type: data.process_type,
-          date: data.date,
-          start_time: data.start_time ?? null,
-          end_time: data.end_time ?? null,
-          good_pieces: data.goodpcs ?? null,
-          bad_pieces: data.badpcs ?? null,
-        };
-
+        const mapped = mapBackendToTask(data);
         setTask(mapped);
         setGoodPiecesInput(mapped.good_pieces ?? "");
         setBadPiecesInput(mapped.bad_pieces ?? "");
+
+        // initialize timerSeconds
+        if (mapped.start_time) {
+          const startSec = parseTimeToSeconds(mapped.start_time);
+          if (mapped.end_time) {
+            const endSec = parseTimeToSeconds(mapped.end_time);
+            setTimerSeconds(Math.max(0, endSec - startSec));
+          } else {
+            const now = new Date();
+            const nowSec =
+              now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            setTimerSeconds(Math.max(0, nowSec - startSec));
+          }
+        } else {
+          setTimerSeconds(0);
+        }
       } catch (err: any) {
         setError(err.message || "Erro inesperado ao buscar tarefa");
       } finally {
@@ -73,45 +116,88 @@ export default function TaskDetail() {
     };
 
     fetchTask();
+    // cleanup on unmount
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [taskId, API_URL]);
+
+  // Manage timer interval: when task.start_time exists and end_time is null => run timer
+  useEffect(() => {
+    // clear existing
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (task?.start_time && !task?.end_time) {
+      // ensure timerSeconds is already set appropriately before starting
+      timerRef.current = window.setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [task?.start_time, task?.end_time]);
+
+  const updateTaskOnServer = async (payload: Record<string, any>) => {
+    if (!task) throw new Error("Tarefa não carregada");
+    const res = await fetch(`${API_URL}/update-task/${task.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`(${res.status}) ${text}`);
+    }
+    const data = await res.json();
+    return mapBackendToTask(data);
+  };
 
   const handleStartStop = async () => {
     if (!task) return;
     setError(null);
 
-    // Determine value to patch
     if (!task.start_time) {
+      // start
       const now = formatLocalTime(new Date());
       try {
-        const res = await fetch(`${API_URL}/tasks/${task.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ start_time: now }),
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Erro ao iniciar: ${res.status} ${text}`);
-        }
-        // update local state
-        setTask((t) => (t ? { ...t, start_time: now } : t));
+        setLoading(true);
+        const updated = await updateTaskOnServer({ start_time: now });
+        setTask(updated);
+
+        // set timerSeconds to 0 (start counting from zero)
+        setTimerSeconds(0);
       } catch (err: any) {
         setError(err.message || "Erro ao iniciar a tarefa");
+      } finally {
+        setLoading(false);
       }
     } else if (!task.end_time) {
+      // stop
       const now = formatLocalTime(new Date());
       try {
-        const res = await fetch(`${API_URL}/tasks/${task.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ end_time: now }),
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Erro ao parar: ${res.status} ${text}`);
-        }
-        setTask((t) => (t ? { ...t, end_time: now } : t));
+        setLoading(true);
+        const updated = await updateTaskOnServer({ end_time: now });
+        setTask(updated);
+
+        // compute final duration: end - start (server returned values)
+        const startSec = parseTimeToSeconds(updated.start_time);
+        const endSec = parseTimeToSeconds(updated.end_time);
+        setTimerSeconds(Math.max(0, endSec - startSec));
       } catch (err: any) {
         setError(err.message || "Erro ao parar a tarefa");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -120,27 +206,24 @@ export default function TaskDetail() {
     if (!task) return;
     setError(null);
 
-    // Validate numeric
     const goodVal =
       typeof goodPiecesInput === "number" ? goodPiecesInput : null;
     const badVal = typeof badPiecesInput === "number" ? badPiecesInput : null;
 
     try {
-      const res = await fetch(`${API_URL}/tasks/${task.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goodpcs: goodVal, badpcs: badVal }),
+      setLoading(true);
+      // send server-friendly keys (good_pieces / bad_pieces)
+      const updated = await updateTaskOnServer({
+        good_pieces: goodVal,
+        bad_pieces: badVal,
       });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Erro ao salvar peças: ${res.status} ${text}`);
-      }
-      // update local state
-      setTask((t) =>
-        t ? { ...t, good_pieces: goodVal, bad_pieces: badVal } : t
-      );
+      setTask(updated);
+      setGoodPiecesInput(updated.good_pieces ?? "");
+      setBadPiecesInput(updated.bad_pieces ?? "");
     } catch (err: any) {
       setError(err.message || "Erro ao salvar as peças");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,6 +245,21 @@ export default function TaskDetail() {
     processTypeLabels[task.process_type] ?? task.process_type ?? "-";
 
   const piecesEditable = Boolean(task.start_time && task.end_time);
+
+  // Determine button color and label based on task state
+  let btnVariant: "success" | "danger" | "primary" = "success";
+  let btnLabel = "Iniciar";
+
+  if (!task.start_time) {
+    btnVariant = "success"; // green before start
+    btnLabel = "Iniciar";
+  } else if (task.start_time && !task.end_time) {
+    btnVariant = "danger"; // red during running
+    btnLabel = "Parar";
+  } else {
+    btnVariant = "primary"; // blue finished
+    btnLabel = "Concluído";
+  }
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
@@ -196,62 +294,97 @@ export default function TaskDetail() {
       {/* Start/Stop Button */}
       <div className="text-center mb-4">
         <Button
-          variant={task.start_time && !task.end_time ? "danger" : "primary"}
+          variant={btnVariant}
           size="lg"
-          style={{ width: "200px" }}
+          style={{
+            width: "400px",
+            height: "120px",
+            fontSize: "2rem",
+            fontWeight: "bold",
+          }}
           onClick={handleStartStop}
+          disabled={
+            Boolean(loading) ||
+            (Boolean(task.start_time) && Boolean(task.end_time))
+          }
         >
-          {!task.start_time
-            ? "Iniciar"
-            : !task.end_time
-            ? "Parar"
-            : "Concluído"}
+          {btnLabel}
+          <br></br>
+          {formatDuration(timerSeconds)}
         </Button>
       </div>
 
-      {/* Pieces Inputs */}
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSavePieces();
+      {/* Pieces Inputs — very small centered row */}
+      <div
+        className="position-fixed start-0 end-0 p-3 shadow"
+        style={{
+          bottom: "10px", // little distance from the bottom
+          zIndex: 1030,
         }}
       >
-        <Form.Group className="mb-3" controlId="goodPieces">
-          <Form.Label>Peças Boas</Form.Label>
-          <Form.Control
-            type="number"
-            value={goodPiecesInput}
-            onChange={(e) =>
-              setGoodPiecesInput(
-                e.target.value === "" ? "" : Number(e.target.value)
-              )
-            }
-            disabled={!piecesEditable}
-            min={0}
-          />
-        </Form.Group>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSavePieces();
+          }}
+        >
+          <Row className="justify-content-center align-items-end">
+            <Col xs={4} sm={3} md={2}>
+              <Form.Group controlId="goodPieces">
+                <Form.Label
+                  className="w-100 text-center"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  Peças Boas
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={goodPiecesInput}
+                  onChange={(e) =>
+                    setGoodPiecesInput(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  disabled={!piecesEditable}
+                  min={0}
+                />
+              </Form.Group>
+            </Col>
 
-        <Form.Group className="mb-3" controlId="badPieces">
-          <Form.Label>Peças Defetivas</Form.Label>
-          <Form.Control
-            type="number"
-            value={badPiecesInput}
-            onChange={(e) =>
-              setBadPiecesInput(
-                e.target.value === "" ? "" : Number(e.target.value)
-              )
-            }
-            disabled={!piecesEditable}
-            min={0}
-          />
-        </Form.Group>
+            <Col xs={4} sm={3} md={2}>
+              <Form.Group controlId="badPieces">
+                <Form.Label
+                  className="w-100 text-center"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  Peças Defetivas
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={badPiecesInput}
+                  onChange={(e) =>
+                    setBadPiecesInput(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  disabled={!piecesEditable}
+                  min={0}
+                />
+              </Form.Group>
+            </Col>
 
-        <div className="text-center">
-          <Button type="submit" variant="success" disabled={!piecesEditable}>
-            Salvar
-          </Button>
-        </div>
-      </Form>
+            <Col xs="auto">
+              <Button
+                type="submit"
+                variant="success"
+                disabled={!piecesEditable}
+              >
+                Salvar
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      </div>
     </div>
   );
 }
