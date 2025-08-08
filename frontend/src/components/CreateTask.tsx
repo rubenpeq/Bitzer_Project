@@ -69,8 +69,9 @@ export default function CreateTask({
     setLoading(true);
     try {
       const payload = cleanPayload(task);
+      console.log(payload)
 
-      const res = await fetch(`${API_URL}/operations/${operationId}/tasks`, {
+      const res = await fetch(`${API_URL}/create-task/${operationId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -112,18 +113,19 @@ export default function CreateTask({
           {/* Process type (required) */}
           <Form.Group className="mb-3">
             <Form.Label>Tipo de Processo</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Ex: prep, qc, processing"
+            <Form.Select
               value={task.process_type}
               onChange={(e) =>
                 setTask((prev) => ({ ...prev, process_type: e.target.value }))
               }
-            />
-            <Form.Text className="text-muted">
-              Use: <code>prep</code>, <code>qc</code> or <code>processing</code>
-              .
-            </Form.Text>
+            >
+              <option value="" disabled>
+                Selecione um tipo de processo
+              </option>
+              <option value="PREPARATION">Preparação de Máquina</option>
+              <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
+              <option value="PROCESSING">Processamento</option>
+            </Form.Select>
           </Form.Group>
 
           {/* Toggle optionals */}

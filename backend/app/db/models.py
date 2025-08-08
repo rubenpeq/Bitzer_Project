@@ -8,9 +8,9 @@ from .database import Base
 
 ### Enums for process type and machine type ###
 class ProcessType(enum.Enum):
-    PREPARATION = "prep"        # machine preparation
-    QUALITY_CONTROL = "qc"      # quality control
-    PROCESSING = "processing"
+    PREPARATION = "PREPARATION"
+    QUALITY_CONTROL = "QUALITY_CONTROL"
+    PROCESSING = "PROCESSING"
 
 class MachineType(enum.Enum):
     CNC = "CNC"
@@ -51,7 +51,7 @@ class TaskDB(Base):
     start_time = Column(Time, nullable=True)                    # Time when the task was initiated
     end_time = Column(Time, nullable=True)                      # Time when the task was finished
 
-    goodpcs = Column(Integer, nullable=True)                    # Quantity of good items
-    badpcs = Column(Integer, nullable=True)                     # Quantity of defective items
+    good_pieces = Column(Integer, nullable=True)                # Quantity of good items
+    bad_pieces = Column(Integer, nullable=True)                 # Quantity of defective items
 
     operation = relationship("OperationDB", back_populates="tasks")

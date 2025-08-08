@@ -77,8 +77,8 @@ for i in range(num_orders):
                 date=task_date,
                 start_time=start_t,
                 end_time=end_t,
-                goodpcs=random.randint(0, 10),
-                badpcs=random.randint(0, 5)
+                good_pieces=random.randint(0, 10),
+                bad_pieces=random.randint(0, 5)
             )
             session.add(task)
 

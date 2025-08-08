@@ -1,13 +1,13 @@
 from pydantic import BaseModel
-from datetime import date, time
+import datetime
 from typing import List, Optional
 import enum
 
 # Enums
 class ProcessType(str, enum.Enum):
-    PREPARATION = "prep"
-    QUALITY_CONTROL = "qc"
-    PROCESSING = "processing"
+    PREPARATION = "PREPARATION"
+    QUALITY_CONTROL = "QUALITY_CONTROL"
+    PROCESSING = "PROCESSING"
 
 class MachineType(str, enum.Enum):
     CNC = "CNC"
@@ -15,22 +15,33 @@ class MachineType(str, enum.Enum):
 
 # Task Schemas
 class TaskBase(BaseModel):
-    operation_id: int
     process_type: ProcessType
-    date: date
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
-    goodpcs: Optional[int] = None
-    badpcs: Optional[int] = None
+    date: Optional[datetime.date] = None
+    start_time: Optional[datetime.time] = None
+    end_time: Optional[datetime.time] = None
+    good_pieces: Optional[int] = None
+    bad_pieces: Optional[int] = None
 
 class TaskCreate(TaskBase):
-    pass
+    # All required except operation_id inherited
+    process_type: ProcessType  # required
+    # date, times, good_pieces, bad_pieces optional from TaskBase
+
+class TaskUpdate(BaseModel):
+    process_type: Optional[ProcessType] = None
+    date: Optional[datetime.date] = None
+    start_time: Optional[datetime.time] = None
+    end_time: Optional[datetime.time] = None
+    good_pieces: Optional[int] = None
+    bad_pieces: Optional[int] = None
 
 class Task(TaskBase):
     id: int
+    operation_id: int
 
     class Config:
         from_attributes = True
+
 
 # Operation Schemas
 class OperationBase(BaseModel):
@@ -41,6 +52,11 @@ class OperationBase(BaseModel):
 class OperationCreate(OperationBase):
     pass
 
+class OperationUpdate(BaseModel):
+    order_number: Optional[int] = None
+    operation_code: Optional[int] = None
+    machine_type: Optional[MachineType] = None
+
 class Operation(OperationBase):
     id: int
     tasks: List[Task] = []
@@ -48,15 +64,24 @@ class Operation(OperationBase):
     class Config:
         from_attributes = True
 
+
 # Order Schemas
 class OrderBase(BaseModel):
     material_number: int
-    start_date: date
-    end_date: date
+    start_date: datetime.date
+    end_date: datetime.date
     num_pieces: int
 
 class OrderCreate(OrderBase):
     order_number: int
+
+class OrderUpdate(BaseModel):
+    material_number: Optional[int] = None
+    start_date: Optional[datetime.date] = None
+    end_date: Optional[datetime.date] = None
+    num_pieces: Optional[int] = None
+    order_number: Optional[int] = None
+
 class Order(OrderBase):
     order_number: int
     operations: List[Operation] = []
