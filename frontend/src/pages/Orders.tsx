@@ -4,7 +4,7 @@ import { Table, Spinner, Alert, Button, Row, Col, Form, Card } from "react-boots
 import { ArrowLeft } from "react-bootstrap-icons";
 import CreateNewOperation from "../components/CreateOperation";
 import EditOrderFieldModal from "../components/EditOrder";
-import type { Order, Operation } from "../utils/Types";
+import { type Order, type Operation, processTypeLabels } from "../utils/Types";
 
 export default function OrderDetail() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -168,8 +168,8 @@ export default function OrderDetail() {
               {sortedOperations.map((op, idx) => (
                 <tr key={idx} onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), op.operation_code)} style={{ cursor: "pointer" }}>
                   <td className="text-center">{op.operation_code}</td>
-                  <td className="text-center">{op.machine_type}</td>
-                  <td className="text-center">{op.machine_location ?? "-"}</td>
+                  <td className="text-center">{processTypeLabels[op.machine_type]}</td>
+                  <td className="text-center">{op.machine_location}</td>
                 </tr>
               ))}
             </tbody>

@@ -220,7 +220,7 @@ export default function TaskDetail() {
 
   if (!task) return <Alert variant="danger">Tarefa não encontrada</Alert>;
 
-  const processLabel =
+  const processedLabel =
     processTypeLabels[task.process_type] ?? task.process_type ?? "-";
 
   const piecesEditable = Boolean(task.start_time && task.end_time);
@@ -255,7 +255,7 @@ export default function TaskDetail() {
       <Row className="mb-4 text-center justify-content-center gx-3">
         {[
           { label: "Data", value: task.date },
-          { label: "Tipo de Processo", value: processLabel },
+          { label: "Tipo de Processo", value: processedLabel },
           { label: "Início", value: task.start_time ?? "--:--:--" },
           { label: "Fim", value: task.end_time ?? "--:--:--" },
           { label: "Operador", value: task.operator ?? "Sem Operador"}

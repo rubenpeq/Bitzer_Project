@@ -60,11 +60,13 @@ export type OrderCreateStr = {
   num_pieces: string;
 };
 
-// Human-friendly labels for process types
+// Labels for Enums types
 export const processTypeLabels: Record<string, string> = {
   QUALITY_CONTROL: "Controlo de Qualidade",
   PROCESSING: "Processamento",
   PREPARATION: "Preparação de Máquina",
+  CNC: "CNC",
+  CONVENTIONAL: "Convencional"
 };
 
 // Small helper to format local time as HH:MM:SS

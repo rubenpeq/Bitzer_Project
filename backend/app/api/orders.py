@@ -55,20 +55,12 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
 def update_order(order_number: int, order_in: OrderUpdate, db: Session = Depends(get_db)):
     """
     Partially update an order. Fields not provided are left untouched.
-    Changing the primary key (order_number) is not allowed here.
     """
     order = db.query(OrderDB).filter(OrderDB.order_number == order_number).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
     data = order_in.model_dump(exclude_unset=True)
-
-    # Prevent changing primary key via this endpoint
-    if "order_number" in data and data["order_number"] != order_number:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Changing order_number is not allowed."
-        )
 
     # Basic validation example: if both dates given ensure start <= end
     start_date = data.get("start_date", getattr(order, "start_date", None))
