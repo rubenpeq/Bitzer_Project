@@ -15,9 +15,9 @@ class MachineType(str, enum.Enum):
 
 # Machine Schemas
 class MachineBase(BaseModel):
-    machine_id: str
-    description: str
     machine_location: str
+    description: str
+    machine_id: str
 
 class MachineCreate(MachineBase):
     pass
@@ -67,7 +67,7 @@ class OperationBase(BaseModel):
     order_number: int
     operation_code: int
     machine_type: MachineType
-    machine_id: Optional[str] = None
+    machine_location: Optional[str] = None
 
 class OperationCreate(OperationBase):
     pass
@@ -76,7 +76,7 @@ class OperationUpdate(BaseModel):
     order_number: Optional[int] = None
     operation_code: Optional[int] = None
     machine_type: Optional[MachineType] = None
-    machine_id: Optional[str] = None
+    machine_location: Optional[str] = None
 
 class Operation(OperationBase):
     id: int
@@ -90,8 +90,8 @@ class Operation(OperationBase):
 # Order Schemas
 class OrderBase(BaseModel):
     material_number: int
-    start_date: datetime.date
-    end_date: datetime.date
+    start_date: Optional[datetime.date]
+    end_date: Optional[datetime.date]
     num_pieces: int
 
 class OrderCreate(OrderBase):

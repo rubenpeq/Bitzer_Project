@@ -80,7 +80,7 @@ export default function OrderDetail() {
   const operationHeaders: { key: keyof Operation; label: string }[] = [
     { key: "operation_code", label: "Código Operação" },
     { key: "machine_type", label: "Tipo de Máquina" },
-    { key: "machine_id", label: "ID da Máquina"},
+    { key: "machine_location", label: "Cen. Trabalho"},
   ];
 
   // --- Search Filtering ---
@@ -99,7 +99,7 @@ export default function OrderDetail() {
         return (
           contains(t.operation_code) ||
           contains(t.machine_type) ||
-          contains(t.machine_id)
+          contains(t.machine_location)
         );
       })
     );
@@ -224,7 +224,7 @@ export default function OrderDetail() {
                 >
                   <td>{op.operation_code}</td>
                   <td>{op.machine_type}</td>
-                  <td>{op.machine_id}</td>
+                  <td>{op.machine_location}</td>
                 </tr>
               ))}
             </tbody>

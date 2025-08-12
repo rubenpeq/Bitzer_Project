@@ -49,8 +49,8 @@ machine_infos = [
 ]
 
 machines = []
-for machine_id, name in machine_infos:
-    m = MachineDB(machine_id=machine_id, description=name, machine_location="00")
+for machine_location, name in machine_infos:
+    m = MachineDB(machine_location=machine_location, description=name, machine_id="00")
     session.add(m)
     machines.append(m)
 session.commit()  # commit so machines exist with proper IDs
@@ -77,7 +77,7 @@ for _ in range(num_orders):
             order=order,
             operation_code=random.randint(100, 999),
             machine_type=random.choice(list(MachineType)),
-            machine_id=random.choice(machines).machine_id
+            machine_location=random.choice(machines).machine_location
         )
         session.add(operation)
 

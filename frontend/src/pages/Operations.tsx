@@ -162,7 +162,7 @@ export default function OperationDetail() {
           { label: "Nº Ordem", value: operation.order_number },
           { label: "Código Operação", value: operation.operation_code },
           { label: "Tipo Máquina", value: operation.machine_type },
-          { label: "Machine ID", value: operation.machine_id },
+          { label: "Machine ID", value: operation.machine_location },
         ].map(({ label, value }, idx) => (
           <Col key={idx} xs={12} sm={6} md={3}>
             <Card className="p-3">
