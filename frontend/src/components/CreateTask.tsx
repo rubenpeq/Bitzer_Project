@@ -137,9 +137,6 @@ export default function CreateTask({
                 setTask((prev) => ({ ...prev, operator: e.target.value }))
               }
             />
-            <Form.Text className="text-muted">
-              Quem realizou a tarefa.
-            </Form.Text>
           </Form.Group>
 
           {/* Toggle optionals */}

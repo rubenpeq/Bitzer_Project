@@ -258,6 +258,7 @@ export default function TaskDetail() {
           { label: "Tipo de Processo", value: processLabel },
           { label: "Início", value: task.start_time ?? "--:--:--" },
           { label: "Fim", value: task.end_time ?? "--:--:--" },
+          { label: "Operador", value: task.operator ?? "Sem Operador"}
         ].map(({ label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
             <Card className="p-3">

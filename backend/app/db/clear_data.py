@@ -2,7 +2,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db.models import Base, OrderDB, OperationDB, TaskDB
+from db.models import Base, OrderDB, OperationDB, TaskDB, MachineDB
 
 # --- Configure your DB URL here ---
 DATABASE_URL = "postgresql://bitzer:bitzer123@localhost/orders_db"
@@ -15,6 +15,7 @@ session = Session()
 try:
     print("Clearing all data from the database...")
 
+    session.query(MachineDB).delete()
     session.query(TaskDB).delete()
     session.query(OperationDB).delete()
     session.query(OrderDB).delete()

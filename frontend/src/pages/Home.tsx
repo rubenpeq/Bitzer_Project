@@ -176,8 +176,8 @@ export default function Home() {
                 >
                   <td>{order.order_number}</td>
                   <td>{order.material_number}</td>
-                  <td>{order.start_date}</td>
-                  <td>{order.end_date}</td>
+                  <td>{order.start_date ?? "-"}</td>
+                  <td>{order.end_date ?? "-"}</td>
                   <td>{order.num_pieces}</td>
                 </tr>
               ))}

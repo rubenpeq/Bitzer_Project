@@ -17,6 +17,7 @@ export default function CreateNewOperation({
 }: CreateNewOperationProps) {
   const [operation_code, setOperationCode] = useState<number | "">("");
   const [machine_type, setMachineType] = useState("");
+  const [machine_location, setMachineLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,11 +34,16 @@ export default function CreateNewOperation({
       setError("Tipo de máquina é obrigatório.");
       return;
     }
+    if (!machine_location.trim()) {
+      setError("Cen. Trabalho é obrigatório.");
+      return;
+    }
 
     const payload = {
       order_number: orderNumber,
       operation_code,
       machine_type: machine_type.toUpperCase(),
+      machine_location: machine_location.trim(),
     };
 
     setLoading(true);
@@ -49,7 +55,7 @@ export default function CreateNewOperation({
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.detail || "Erro ao criar operação.");
       }
 
@@ -59,6 +65,7 @@ export default function CreateNewOperation({
       // Reset form
       setOperationCode("");
       setMachineType("");
+      setMachineLocation("");
       onClose();
     } catch (err: any) {
       setError(err.message || "Erro desconhecido.");
@@ -71,6 +78,7 @@ export default function CreateNewOperation({
     setError(null);
     setOperationCode("");
     setMachineType("");
+    setMachineLocation("");
     onClose();
   };
 
@@ -96,6 +104,7 @@ export default function CreateNewOperation({
                     e.target.value === "" ? "" : Number(e.target.value)
                   )
                 }
+                disabled={loading}
               />
             </Col>
           </Form.Group>
@@ -108,11 +117,27 @@ export default function CreateNewOperation({
               <Form.Select
                 value={machine_type}
                 onChange={(e) => setMachineType(e.target.value)}
+                disabled={loading}
               >
                 <option value="">Selecione o tipo</option>
                 <option value="CNC">CNC</option>
                 <option value="CONVENTIONAL">Convencional</option>
               </Form.Select>
+            </Col>
+          </Form.Group>
+
+          <Form.Group as={Row} className="mb-3" controlId="machineId">
+            <Form.Label column sm={4}>
+              Cen. Trabalho
+            </Form.Label>
+            <Col sm={8}>
+              <Form.Control
+                type="text"
+                placeholder=""
+                value={machine_location}
+                onChange={(e) => setMachineLocation(e.target.value)}
+                disabled={loading}
+              />
             </Col>
           </Form.Group>
         </Form>

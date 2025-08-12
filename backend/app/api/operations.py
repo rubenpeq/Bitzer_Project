@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
-from db.models import OperationDB
+from db.models import OperationDB, MachineDB
 from db.schemas import Operation, OperationCreate
 from typing import List
 
@@ -55,8 +55,14 @@ def get_operation_id(order_number: int, operation_code: int, db: Session = Depen
         raise HTTPException(status_code=404, detail="Operation not found")
     return operation.id
 
-@router.post("/operations", response_model=Operation, tags=["Operations"], summary="Adds new operation to database")
+@router.post(
+    "/operations",
+    response_model=Operation,
+    tags=["Operations"],
+    summary="Adds new operation to database"
+)
 def create_operation(operation: OperationCreate, db: Session = Depends(get_db)):
+    # Check if operation already exists for the order
     existing = (
         db.query(OperationDB)
         .filter(
@@ -67,12 +73,25 @@ def create_operation(operation: OperationCreate, db: Session = Depends(get_db)):
     )
     if existing:
         raise HTTPException(
-            status_code=400, detail="Operation code already exists for this order"
+            status_code=400,
+            detail="Operation code already exists for this order"
         )
 
+    # Check if machine location exists in Machines table
+    machine_exists = (
+        db.query(MachineDB)
+        .filter(MachineDB.machine_location == operation.machine_location)
+        .first()
+    )
+    if not machine_exists:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cen. Trabalho '{operation.machine_location}' não existe na base de dados."
+        )
+
+    # Create the operation
     new_operation = OperationDB(**operation.model_dump())
     db.add(new_operation)
     db.commit()
     db.refresh(new_operation)
     return new_operation
-
