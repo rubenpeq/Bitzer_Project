@@ -6,11 +6,10 @@ from datetime import date, timedelta, time, datetime
 import random
 import sys
 
-from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType, MachineDB  # <-- added MachineDB
+from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType, MachineDB
 
-# Check if an argument was passed
 if len(sys.argv) < 2:
-    print("Usage: python seed_data.py <number_of_orders>")
+    print("Usage: python -m db.seed_data <number_of_orders>")
     sys.exit(1)
 
 try:
@@ -21,17 +20,14 @@ except ValueError:
 
 print(f"Seeding {num_orders} orders...")
 
-# --- Configure your DB URL here ---
 DATABASE_URL = "postgresql://bitzer:bitzer123@localhost/orders_db"
 
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Create all tables (only if not already created)
 Base.metadata.create_all(engine)
 
-# --- Helpers ---
 def random_date(start: date, end: date) -> date:
     delta = end - start
     return start + timedelta(days=random.randint(0, delta.days))
@@ -40,22 +36,27 @@ def random_time():
     return time(hour=random.randint(6, 18), minute=random.randint(0, 59))
 
 def random_operator():
-    # Example operator names, adjust as needed
     operators = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
     return random.choice(operators)
 
 # --- Seed machines first ---
-machine_names = ["Lathe", "Milling Machine", "Drill Press", "Grinder", "Welder"]
+machine_infos = [
+    ("M001", "Lathe"),
+    ("M002", "Milling Machine"),
+    ("M003", "Drill Press"),
+    ("M004", "Grinder"),
+    ("M005", "Welder"),
+]
+
 machines = []
-for name in machine_names:
-    m = MachineDB(name=name)
+for machine_id, name in machine_infos:
+    m = MachineDB(machine_id=machine_id, description=name, machine_location="00")
     session.add(m)
     machines.append(m)
-session.commit()  # commit so machines have IDs
+session.commit()  # commit so machines exist with proper IDs
 
-# --- Seeding Logic ---
-orders = []
-for i in range(num_orders):
+# --- Seed orders, operations, tasks ---
+for _ in range(num_orders):
     order_number = random.randint(100000, 199999)
     material_number = random.randint(100000, 999999)
     start = random_date(date(2025, 7, 1), date(2025, 7, 10))
@@ -70,18 +71,17 @@ for i in range(num_orders):
         num_pieces=num_pieces
     )
     session.add(order)
-    orders.append(order)
 
-    for op_num in range(random.randint(1, 3)):
+    for _ in range(random.randint(1, 3)):
         operation = OperationDB(
             order=order,
             operation_code=random.randint(100, 999),
             machine_type=random.choice(list(MachineType)),
-            machine_id=random.choice(machines).id  # assign existing machine id
+            machine_id=random.choice(machines).machine_id
         )
         session.add(operation)
 
-        for task_num in range(random.randint(1, 4)):
+        for _ in range(random.randint(1, 4)):
             task_date = random_date(start, end)
             start_t = random_time()
             end_t = (datetime.combine(date.today(), start_t) + timedelta(minutes=random.randint(30, 120))).time()
@@ -94,11 +94,10 @@ for i in range(num_orders):
                 end_time=end_t,
                 good_pieces=random.randint(0, 10),
                 bad_pieces=random.randint(0, 5),
-                operator=random_operator()  # new operator field
+                operator=random_operator()
             )
             session.add(task)
 
-# --- Commit to DB ---
 session.commit()
 session.close()
 print("✅ Database seeded successfully.")
