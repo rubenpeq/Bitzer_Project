@@ -6,7 +6,7 @@ from datetime import date, timedelta, time, datetime
 import random
 import sys
 
-from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType
+from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType, MachineDB  # <-- added MachineDB
 
 # Check if an argument was passed
 if len(sys.argv) < 2:
@@ -39,6 +39,20 @@ def random_date(start: date, end: date) -> date:
 def random_time():
     return time(hour=random.randint(6, 18), minute=random.randint(0, 59))
 
+def random_operator():
+    # Example operator names, adjust as needed
+    operators = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
+    return random.choice(operators)
+
+# --- Seed machines first ---
+machine_names = ["Lathe", "Milling Machine", "Drill Press", "Grinder", "Welder"]
+machines = []
+for name in machine_names:
+    m = MachineDB(name=name)
+    session.add(m)
+    machines.append(m)
+session.commit()  # commit so machines have IDs
+
 # --- Seeding Logic ---
 orders = []
 for i in range(num_orders):
@@ -62,7 +76,8 @@ for i in range(num_orders):
         operation = OperationDB(
             order=order,
             operation_code=random.randint(100, 999),
-            machine_type=random.choice(list(MachineType))
+            machine_type=random.choice(list(MachineType)),
+            machine_id=random.choice(machines).id  # assign existing machine id
         )
         session.add(operation)
 
@@ -78,7 +93,8 @@ for i in range(num_orders):
                 start_time=start_t,
                 end_time=end_t,
                 good_pieces=random.randint(0, 10),
-                bad_pieces=random.randint(0, 5)
+                bad_pieces=random.randint(0, 5),
+                operator=random_operator()  # new operator field
             )
             session.add(task)
 

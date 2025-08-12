@@ -104,8 +104,8 @@ export default function OrderDetail() {
 
     return [...filteredOps].sort((a, b) => {
       const { key, direction } = sortConfig;
-      let aVal = a[key]?.toString().toLowerCase();
-      let bVal = b[key]?.toString().toLowerCase();
+      let aVal = a[key]?.toString().toLowerCase() ?? "";
+      let bVal = b[key]?.toString().toLowerCase() ?? "";
 
       if (aVal < bVal) return direction === "asc" ? -1 : 1;
       if (aVal > bVal) return direction === "asc" ? 1 : -1;

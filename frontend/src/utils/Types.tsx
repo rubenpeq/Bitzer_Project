@@ -1,22 +1,35 @@
 // Shared types and helpers for the frontend
 
+// Enum for machine type
+export type MachineType = "CNC" | "CONVENTIONAL";
+
+// Machine type
+export type Machine = {
+  machine_id: string;
+  description: string;
+  machine_location: string;
+};
+
+// Operation type
 export type Operation = {
   id: number;
   operation_code: number;
-  machine_type: string;
+  machine_type: MachineType;
   order_number: number;
+  machine_id?: string;
 };
 
 // Frontend-facing Task shape (normalized)
 export type Task = {
   id: number;
   operation_id: number;
-  process_type: "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING" | string;
+  process_type: "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING";
   date: string; // YYYY-MM-DD
   start_time?: string | null; // HH:MM:SS or null
   end_time?: string | null; // HH:MM:SS or null
   good_pieces?: number | null;
   bad_pieces?: number | null;
+  operator?: string | null;
 };
 
 // Task payload used when creating a task from the UI
@@ -27,6 +40,7 @@ export type TaskCreate = {
   end_time?: string;
   good_pieces?: number;
   bad_pieces?: number;
+  operator?: string; // new field
 };
 
 export type Order = {
@@ -54,7 +68,6 @@ export const processTypeLabels: Record<string, string> = {
 };
 
 // Utility: normalize a task object that may come from the backend
-// Backend may use snake_case names like `goodpcs`/`badpcs` or slightly different fields.
 export function normalizeTaskFromBackend(raw: any): Task {
   return {
     id: raw.id,
@@ -71,11 +84,11 @@ export function normalizeTaskFromBackend(raw: any): Task {
       raw.badpcs ??
       raw.bad_pieces ??
       (typeof raw.badPieces === "number" ? raw.badPieces : null),
+    operator: raw.operator ?? null, // new
   } as Task;
 }
 
 // Utility: convert a TaskCreate (frontend shape) to the backend payload expected by the API
-// This will strip undefined/empty values and map names to `goodpcs`/`badpcs` which your backend expects.
 export function toBackendTaskPayload(payload: TaskCreate): Record<string, any> {
   const out: Record<string, any> = {};
   if (payload.process_type !== undefined)
@@ -85,6 +98,7 @@ export function toBackendTaskPayload(payload: TaskCreate): Record<string, any> {
   if (payload.end_time) out.end_time = payload.end_time;
   if (payload.good_pieces !== undefined) out.goodpcs = payload.good_pieces;
   if (payload.bad_pieces !== undefined) out.badpcs = payload.bad_pieces;
+  if (payload.operator !== undefined) out.operator = payload.operator;
   return out;
 }
 

@@ -13,6 +13,25 @@ class MachineType(str, enum.Enum):
     CNC = "CNC"
     CONVENTIONAL = "CONVENTIONAL"
 
+# Machine Schemas
+class MachineBase(BaseModel):
+    machine_id: str
+    description: str
+    machine_location: str
+
+class MachineCreate(MachineBase):
+    pass
+
+class MachineUpdate(BaseModel):
+    machine_id: Optional[str] = None
+    description: Optional[str] = None
+    machine_location: Optional[str] = None
+
+class Machine(MachineBase):
+    class Config:
+        from_attributes = True
+
+
 # Task Schemas
 class TaskBase(BaseModel):
     process_type: ProcessType
@@ -21,11 +40,10 @@ class TaskBase(BaseModel):
     end_time: Optional[datetime.time] = None
     good_pieces: Optional[int] = None
     bad_pieces: Optional[int] = None
+    operator: Optional[str] = None
 
 class TaskCreate(TaskBase):
-    # All required except operation_id inherited
-    process_type: ProcessType  # required
-    # date, times, good_pieces, bad_pieces optional from TaskBase
+    pass
 
 class TaskUpdate(BaseModel):
     process_type: Optional[ProcessType] = None
@@ -34,6 +52,7 @@ class TaskUpdate(BaseModel):
     end_time: Optional[datetime.time] = None
     good_pieces: Optional[int] = None
     bad_pieces: Optional[int] = None
+    operator: Optional[str] = None
 
 class Task(TaskBase):
     id: int
@@ -48,6 +67,7 @@ class OperationBase(BaseModel):
     order_number: int
     operation_code: int
     machine_type: MachineType
+    machine_id: Optional[str] = None
 
 class OperationCreate(OperationBase):
     pass
@@ -56,10 +76,12 @@ class OperationUpdate(BaseModel):
     order_number: Optional[int] = None
     operation_code: Optional[int] = None
     machine_type: Optional[MachineType] = None
+    machine_id: Optional[str] = None
 
 class Operation(OperationBase):
     id: int
     tasks: List[Task] = []
+    machine: Optional[Machine] = None
 
     class Config:
         from_attributes = True
