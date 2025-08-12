@@ -23,7 +23,7 @@ export default function OperationDetail() {
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Task;
+    key: keyof Task | "operator";
     direction: "asc" | "desc";
   } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,10 +48,8 @@ export default function OperationDetail() {
     ])
       .then(([operationData, taskData]) => {
         setOperation(operationData);
-        // normalize tasks from backend to UI shape
-        const normalized: Task[] = (taskData ?? []).map((t: any) =>
-          t
-        );
+        // normalize tasks from backend to UI shape if needed; for now we trust backend shape
+        const normalized: Task[] = (taskData ?? []).map((t: any) => t);
         setTasks(normalized);
         setFilteredTasks(normalized);
       })
@@ -64,37 +62,52 @@ export default function OperationDetail() {
 
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return setFilteredTasks(tasks);
+    if (!term) {
+      setFilteredTasks(tasks);
+      return;
+    }
+
+    const contains = (val: any) =>
+      val !== undefined && val !== null && String(val).toLowerCase().includes(term);
+
     setFilteredTasks(
-      tasks.filter(
-        (t) =>
-          (t.process_type ?? "").toLowerCase().includes(term) ||
-          (t.date ?? "").includes(term)
-      )
+      tasks.filter((t) => {
+        return (
+          contains(t.process_type) ||
+          contains(t.date) ||
+          contains(t.operator)
+        );
+      })
     );
-  }, [searchTerm, tasks]);
+  }, [searchTerm, tasks, operation]);
 
   // Double click to task details
   const handleRowDoubleClick = (taskId: number) => {
     navigate(`/task/${taskId}`);
   };
 
-  // Table Headers
-  const taskHeaders: { key: keyof Task; label: string }[] = [
+  // Table Headers: added operator column
+  const taskHeaders: { key: keyof Task | "operator"; label: string }[] = [
     { key: "process_type", label: "Tipo de Processo" },
     { key: "date", label: "Data" },
     { key: "start_time", label: "Início" },
     { key: "end_time", label: "Fim" },
     { key: "good_pieces", label: "Peças Boas" },
     { key: "bad_pieces", label: "Peças Defetivas" },
+    { key: "operator", label: "Operador" },
   ];
 
   const sortedTasks = useMemo(() => {
     if (!sortConfig) return filteredTasks;
     return [...filteredTasks].sort((a, b) => {
       const { key, direction } = sortConfig;
-      const aVal = (a[key] ?? "").toString().toLowerCase();
-      const bVal = (b[key] ?? "").toString().toLowerCase();
+
+      // safe access (some keys may be "operator" or Task fields)
+      const aRaw = (a as any)[key] ?? "";
+      const bRaw = (b as any)[key] ?? "";
+
+      const aVal = String(aRaw).toLowerCase();
+      const bVal = String(bRaw).toLowerCase();
 
       if (aVal < bVal) return direction === "asc" ? -1 : 1;
       if (aVal > bVal) return direction === "asc" ? 1 : -1;
@@ -102,7 +115,7 @@ export default function OperationDetail() {
     });
   }, [filteredTasks, sortConfig]);
 
-  const handleSort = (key: keyof Task) => {
+  const handleSort = (key: keyof Task | "operator") => {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig?.key === key && sortConfig.direction === "asc") {
       direction = "desc";
@@ -130,8 +143,7 @@ export default function OperationDetail() {
 
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  if (!operation)
-    return <Alert variant="danger">Operação não encontrada</Alert>;
+  if (!operation) return <Alert variant="danger">Operação não encontrada</Alert>;
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
@@ -150,12 +162,13 @@ export default function OperationDetail() {
           { label: "Nº Ordem", value: operation.order_number },
           { label: "Código Operação", value: operation.operation_code },
           { label: "Tipo Máquina", value: operation.machine_type },
+          { label: "Machine ID", value: operation.machine_id },
         ].map(({ label, value }, idx) => (
           <Col key={idx} xs={12} sm={6} md={3}>
             <Card className="p-3">
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                {value}
+                {value ?? "-"}
               </Card.Text>
             </Card>
           </Col>
@@ -165,7 +178,7 @@ export default function OperationDetail() {
       {/* Search Bar */}
       <Form.Control
         type="search"
-        placeholder="Pesquisar tarefas..."
+        placeholder="Pesquisar tarefas... (tipo de processo, data ou operador)"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-3"
@@ -181,8 +194,8 @@ export default function OperationDetail() {
               <tr>
                 {taskHeaders.map(({ key, label }) => (
                   <th
-                    key={key}
-                    style={{ cursor: "pointer" }}
+                    key={label}
+                    style={{ cursor: "pointer", textAlign: "center" }}
                     onClick={() => handleSort(key)}
                   >
                     {label}
@@ -203,12 +216,13 @@ export default function OperationDetail() {
                   onDoubleClick={() => handleRowDoubleClick(task.id)}
                   style={{ cursor: "pointer" }}
                 >
-                  <td>{processTypeLabels[task.process_type]}</td>
+                  <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
                   <td>{task.date}</td>
                   <td>{task.start_time ?? "--:--:--"}</td>
                   <td>{task.end_time ?? "--:--:--"}</td>
                   <td>{task.good_pieces ?? "-"}</td>
                   <td>{task.bad_pieces ?? "-"}</td>
+                  <td>{task.operator ?? "-"}</td>
                 </tr>
               ))}
             </tbody>

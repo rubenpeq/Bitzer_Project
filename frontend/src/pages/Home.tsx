@@ -131,7 +131,7 @@ export default function Home() {
     <div className="p-3 position-relative" style={{ height: "100%" }}>
       <Form.Control
         type="search"
-        placeholder="Pesquisar por número de ordem ou material ..."
+        placeholder="Pesquisar Ordem ... (nº Ordem ou nº Material)"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-3"
@@ -154,7 +154,7 @@ export default function Home() {
                 {orderHeaders.map(({ key, label }) => (
                   <th
                     key={key}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "pointer", textAlign: "center" }}
                     onClick={() => handleSort(key)}
                   >
                     {label}{" "}

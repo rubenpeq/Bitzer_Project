@@ -80,6 +80,7 @@ export default function OrderDetail() {
   const operationHeaders: { key: keyof Operation; label: string }[] = [
     { key: "operation_code", label: "Código Operação" },
     { key: "machine_type", label: "Tipo de Máquina" },
+    { key: "machine_id", label: "ID da Máquina"},
   ];
 
   // --- Search Filtering ---
@@ -88,14 +89,20 @@ export default function OrderDetail() {
 
     if (!term) {
       setFilteredOps(operations);
-    } else {
-      const filtered = operations.filter(
-        (op) =>
-          op.operation_code.toString().includes(term) ||
-          op.machine_type.toLowerCase().includes(term)
-      );
-      setFilteredOps(filtered);
-    }
+      return;
+    } 
+    const contains = (val: any) =>
+      val !== undefined && val !== null && String(val).toLowerCase().includes(term);
+    
+    setFilteredOps(
+      operations.filter((t) => {
+        return (
+          contains(t.operation_code) ||
+          contains(t.machine_type) ||
+          contains(t.machine_id)
+        );
+      })
+    );
   }, [searchTerm, operations]);
 
   // --- Sorting Logic ---
@@ -176,7 +183,7 @@ export default function OrderDetail() {
       {/* Search Field */}
       <Form.Control
         type="search"
-        placeholder="Pesquisar operações..."
+        placeholder="Pesquisar operações... (código de operação, tipo de máquina ou id de máquina)"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-3"
@@ -193,7 +200,7 @@ export default function OrderDetail() {
                 {operationHeaders.map(({ key, label }) => (
                   <th
                     key={key}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "pointer", textAlign: "center" }}
                     onClick={() => handleSort(key)}
                   >
                     {label}
@@ -217,6 +224,7 @@ export default function OrderDetail() {
                 >
                   <td>{op.operation_code}</td>
                   <td>{op.machine_type}</td>
+                  <td>{op.machine_id}</td>
                 </tr>
               ))}
             </tbody>
