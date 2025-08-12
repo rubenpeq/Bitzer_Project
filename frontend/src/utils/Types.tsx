@@ -23,24 +23,24 @@ export type Operation = {
 export type Task = {
   id: number;
   operation_id: number;
+  operator: string;
   process_type: "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING";
   date: string; // YYYY-MM-DD
   start_time?: string | null; // HH:MM:SS or null
   end_time?: string | null; // HH:MM:SS or null
   good_pieces?: number | null;
   bad_pieces?: number | null;
-  operator?: string | null;
 };
 
 // Task payload used when creating a task from the UI
 export type TaskCreate = {
   process_type: string;
+  operator: string;
   date?: string; // optional, defaults to today in the UI
   start_time?: string;
   end_time?: string;
   good_pieces?: number;
   bad_pieces?: number;
-  operator?: string; // new field
 };
 
 export type Order = {
@@ -66,27 +66,6 @@ export const processTypeLabels: Record<string, string> = {
   PROCESSING: "Processamento",
   PREPARATION: "Preparação de Máquina",
 };
-
-// Utility: normalize a task object that may come from the backend
-export function normalizeTaskFromBackend(raw: any): Task {
-  return {
-    id: raw.id,
-    operation_id: raw.operation_id ?? raw.operationId,
-    process_type: raw.process_type ?? raw.processType,
-    date: raw.date,
-    start_time: raw.start_time ?? raw.startTime ?? null,
-    end_time: raw.end_time ?? raw.endTime ?? null,
-    good_pieces:
-      raw.goodpcs ??
-      raw.good_pieces ??
-      (typeof raw.goodPieces === "number" ? raw.goodPieces : null),
-    bad_pieces:
-      raw.badpcs ??
-      raw.bad_pieces ??
-      (typeof raw.badPieces === "number" ? raw.badPieces : null),
-    operator: raw.operator ?? null, // new
-  } as Task;
-}
 
 // Utility: convert a TaskCreate (frontend shape) to the backend payload expected by the API
 export function toBackendTaskPayload(payload: TaskCreate): Record<string, any> {

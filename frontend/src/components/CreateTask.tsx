@@ -21,6 +21,7 @@ export default function CreateTask({
   // form state (optional fields may be undefined)
   const [task, setTask] = useState<TaskCreate>({
     process_type: "",
+    operator: "",
     date: todayDate,
   });
 
@@ -35,6 +36,7 @@ export default function CreateTask({
     if (show) {
       setTask({
         process_type: "",
+        operator: "",
         date: todayDate, // default date set to today
       });
       setShowOptionals(false);
@@ -46,7 +48,6 @@ export default function CreateTask({
   const cleanPayload = (payload: TaskCreate) => {
     // Remove empty-string properties, keep numbers & defined values.
     const copy: any = { ...payload };
-    // If date is empty string or undefined, delete it
     if (!copy.date) delete copy.date;
     if (!copy.start_time) delete copy.start_time;
     if (!copy.end_time) delete copy.end_time;
@@ -54,6 +55,8 @@ export default function CreateTask({
       delete copy.good_pieces;
     if (copy.bad_pieces === "" || copy.bad_pieces === undefined)
       delete copy.bad_pieces;
+    if (copy.operator === "" || copy.operator === undefined)
+      delete copy.operator;
     return copy;
   };
 
@@ -125,17 +128,31 @@ export default function CreateTask({
               <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
               <option value="PROCESSING">Processamento</option>
             </Form.Select>
+            <Form.Label>Operador</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Nome do operador"
+              value={task.operator ?? ""}
+              onChange={(e) =>
+                setTask((prev) => ({ ...prev, operator: e.target.value }))
+              }
+            />
+            <Form.Text className="text-muted">
+              Quem realizou a tarefa.
+            </Form.Text>
           </Form.Group>
 
           {/* Toggle optionals */}
           <div className="mb-2">
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => setShowOptionals((s) => !s)}
-            >
-              {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
-            </Button>
+            <div className="d-flex justify-content-center">
+              <Button
+                variant="info"
+                size="sm"
+                onClick={() => setShowOptionals((s) => !s)}
+              >
+                {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
+              </Button>
+            </div>
           </div>
 
           {/* Optionals block */}

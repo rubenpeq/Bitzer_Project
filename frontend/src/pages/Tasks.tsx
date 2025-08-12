@@ -32,26 +32,6 @@ const parseTimeToSeconds = (timeStr?: string | null): number => {
   return hh * 3600 + mm * 60 + ss;
 };
 
-// Map backend variations to frontend Task
-const mapBackendToTask = (data: any): Task => ({
-  id: data.id,
-  operation_id: data.operation_id ?? data.operationId ?? data.operation_id,
-  process_type: data.process_type ?? data.processType ?? "",
-  date: data.date ?? "",
-  start_time: data.start_time ?? data.startTime ?? null,
-  end_time: data.end_time ?? data.endTime ?? null,
-  good_pieces:
-    data.good_pieces ??
-    data.goodpcs ??
-    (typeof data.goodPieces === "number" ? data.goodPieces : null) ??
-    null,
-  bad_pieces:
-    data.bad_pieces ??
-    data.badpcs ??
-    (typeof data.badPieces === "number" ? data.badPieces : null) ??
-    null,
-});
-
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
@@ -88,16 +68,15 @@ export default function TaskDetail() {
           throw new Error(`Erro ao buscar tarefa: ${res.status} ${text}`);
         }
         const data = await res.json();
-        const mapped = mapBackendToTask(data);
-        setTask(mapped);
-        setGoodPiecesInput(mapped.good_pieces ?? "");
-        setBadPiecesInput(mapped.bad_pieces ?? "");
+        setTask(data);
+        setGoodPiecesInput(data.good_pieces ?? "");
+        setBadPiecesInput(data.bad_pieces ?? "");
 
         // initialize timerSeconds
-        if (mapped.start_time) {
-          const startSec = parseTimeToSeconds(mapped.start_time);
-          if (mapped.end_time) {
-            const endSec = parseTimeToSeconds(mapped.end_time);
+        if (data.start_time) {
+          const startSec = parseTimeToSeconds(data.start_time);
+          if (data.end_time) {
+            const endSec = parseTimeToSeconds(data.end_time);
             setTimerSeconds(Math.max(0, endSec - startSec));
           } else {
             const now = new Date();
@@ -160,7 +139,7 @@ export default function TaskDetail() {
       throw new Error(`(${res.status}) ${text}`);
     }
     const data = await res.json();
-    return mapBackendToTask(data);
+    return data;
   };
 
   const handleStartStop = async () => {
