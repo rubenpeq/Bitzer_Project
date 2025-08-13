@@ -189,7 +189,7 @@ export default function OperationDetail() {
         <Alert variant="warning">Nenhuma tarefa encontrada.</Alert>
       ) : (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-          <Table striped bordered hover responsive>
+          <Table striped bordered hover className="sticky-table">
             <thead>
               <tr>
                 {taskHeaders.map(({ key, label }) => (

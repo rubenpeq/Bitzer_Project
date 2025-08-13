@@ -154,7 +154,7 @@ export default function OrderDetail() {
         <Alert variant="warning">Nenhuma operação encontrada.</Alert>
       ) : (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-          <Table striped bordered hover responsive>
+          <Table striped bordered hover className="sticky-table">
             <thead>
               <tr>
                 {operationHeaders.map(({ key, label }) => (

@@ -148,7 +148,7 @@ export default function Home() {
         <Alert variant="warning">Nenhum pedido encontrado.</Alert>
       ) : (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-          <Table striped bordered hover responsive>
+          <Table striped bordered hover className="sticky-table">
             <thead>
               <tr>
                 {orderHeaders.map(({ key, label }) => (
