@@ -1,40 +1,52 @@
 // Shared types and helpers for the frontend
 
-// Enum for machine type
+// -------------------------------
+// Enums
+// -------------------------------
 export type MachineType = "CNC" | "CONVENTIONAL";
+export type ProcessType = "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING";
 
+// -------------------------------
 // Machine type
+// -------------------------------
 export type Machine = {
+  id: number;
   machine_location: string;
   description: string;
   machine_id: string;
+  machine_type: MachineType;
 };
 
+// -------------------------------
 // Operation type
+// -------------------------------
 export type Operation = {
   id: number;
-  operation_code: number;
-  machine_type: MachineType;
-  order_number: number;
-  machine_location?: string;
+  operation_code: string;
+  order_id: number;          // now references order by ID
+  machine_id?: number | null; // references machine by ID (nullable)
+  machine?: Machine;          // optional expanded machine details
+  tasks?: Task[];             // operations include tasks
 };
 
-// Frontend-facing Task shape (normalized)
+// -------------------------------
+// Task type
+// -------------------------------
 export type Task = {
   id: number;
   operation_id: number;
   operator: string;
-  process_type: "PREPARATION" | "QUALITY_CONTROL" | "PROCESSING";
+  process_type: ProcessType;
   date: string; // YYYY-MM-DD
   start_time?: string | null; // HH:MM:SS or null
-  end_time?: string | null; // HH:MM:SS or null
+  end_time?: string | null;   // HH:MM:SS or null
   good_pieces?: number | null;
   bad_pieces?: number | null;
 };
 
 // Task payload used when creating a task from the UI
 export type TaskCreate = {
-  process_type: string;
+  process_type: ProcessType;
   operator: string;
   date?: string; // optional, defaults to today in the UI
   start_time?: string;
@@ -43,11 +55,15 @@ export type TaskCreate = {
   bad_pieces?: number;
 };
 
+// -------------------------------
+// Order type
+// -------------------------------
 export type Order = {
+  id: number;
   order_number: number;
   material_number: number;
   start_date?: string; // YYYY-MM-DD
-  end_date?: string; // YYYY-MM-DD
+  end_date?: string;   // YYYY-MM-DD
   num_pieces: number;
   operations?: Operation[];
 };
@@ -60,7 +76,9 @@ export type OrderCreateStr = {
   num_pieces: string;
 };
 
-// Labels for Enums types
+// -------------------------------
+// Labels for Enums
+// -------------------------------
 export const processTypeLabels: Record<string, string> = {
   QUALITY_CONTROL: "Controlo de Qualidade",
   PROCESSING: "Processamento",
@@ -69,7 +87,9 @@ export const processTypeLabels: Record<string, string> = {
   CONVENTIONAL: "Convencional"
 };
 
-// Small helper to format local time as HH:MM:SS
+// -------------------------------
+// Helpers
+// -------------------------------
 export function formatLocalTime(date = new Date()): string {
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");

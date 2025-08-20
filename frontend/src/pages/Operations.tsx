@@ -159,10 +159,10 @@ export default function OperationDetail() {
       {/* Operation Header */}
       <Row className="mb-4 gx-3 text-center justify-content-center">
         {[
-          { label: "Nº Ordem", value: operation.order_number },
+          { label: "Nº Ordem", value: operation.order_id },
           { label: "Código Operação", value: operation.operation_code },
-          { label: "Tipo Máquina", value: operation.machine_type },
-          { label: "Machine ID", value: operation.machine_location },
+          { label: "Tipo Máquina", value: operation.machine?.machine_type },
+          { label: "Machine ID", value: operation.machine?.machine_location },
         ].map(({ label, value }, idx) => (
           <Col key={idx} xs={12} sm={6} md={3}>
             <Card className="p-3">

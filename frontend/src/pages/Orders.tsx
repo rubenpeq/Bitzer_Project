@@ -50,8 +50,7 @@ export default function OrderDetail() {
 
   const operationHeaders: { key: keyof Operation; label: string }[] = [
     { key: "operation_code", label: "Código Operação" },
-    { key: "machine_type", label: "Tipo de Máquina" },
-    { key: "machine_location", label: "Cen. Trabalho" },
+    { key: "machine", label: "Cen. Trabalho" },
   ];
 
   // Open edit modal from card click
@@ -77,7 +76,7 @@ export default function OrderDetail() {
     const t = searchTerm.trim().toLowerCase();
     if (!t) return setFilteredOps(operations);
     const contains = (v: any) => v !== undefined && v !== null && String(v).toLowerCase().includes(t);
-    setFilteredOps(operations.filter((op) => contains(op.operation_code) || contains(op.machine_type) || contains(op.machine_location)));
+    setFilteredOps(operations.filter((op) => contains(op.operation_code) || contains(op.machine?.machine_type) || contains(op.machine?.machine_location)));
   }, [searchTerm, operations]);
 
   // sorting
@@ -166,10 +165,10 @@ export default function OrderDetail() {
             </thead>
             <tbody>
               {sortedOperations.map((op, idx) => (
-                <tr key={idx} onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), op.operation_code)} style={{ cursor: "pointer" }}>
+                <tr key={idx} onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), Number(op.operation_code))} style={{ cursor: "pointer" }}>
                   <td className="text-center">{op.operation_code}</td>
-                  <td className="text-center">{processTypeLabels[op.machine_type]}</td>
-                  <td className="text-center">{op.machine_location}</td>
+                  <td className="text-center">{op.machine?.machine_type ? processTypeLabels[op.machine.machine_type] : "—"}</td>
+                  <td className="text-center">{op.machine?.machine_location ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
