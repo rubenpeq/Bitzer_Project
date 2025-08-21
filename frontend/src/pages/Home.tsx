@@ -65,6 +65,7 @@ export default function Home() {
   const sortedOrders = useMemo(() => {
     if (!sortConfig) return filteredOrders;
     const { key, direction } = sortConfig;
+
     return [...filteredOrders].sort((a, b) => {
       let aVal: any = a[key];
       let bVal: any = b[key];
@@ -82,6 +83,14 @@ export default function Home() {
         return direction === "asc" ? aDate - bDate : bDate - aDate;
       }
 
+      // numeric comparison for num_pieces
+      if (key === "num_pieces") {
+        const aNum = Number(aVal);
+        const bNum = Number(bVal);
+        return direction === "asc" ? aNum - bNum : bNum - aNum;
+      }
+
+      // fallback string comparison
       const aStr = String(aVal).toLowerCase();
       const bStr = String(bVal).toLowerCase();
       if (aStr < bStr) return direction === "asc" ? -1 : 1;
