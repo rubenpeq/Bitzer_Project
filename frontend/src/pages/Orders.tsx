@@ -15,7 +15,7 @@ export default function OrderDetail() {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [filteredOps, setFilteredOps] = useState<Operation[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Operation; direction: "asc" | "desc" } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [showCreateOp, setShowCreateOp] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +48,11 @@ export default function OrderDetail() {
       .finally(() => setLoading(false));
   }, [orderNumber]);
 
-  const operationHeaders: { key: keyof Operation; label: string }[] = [
+  // Visible columns: operation_code, machine_type (nested), machine_location (nested)
+  const operationHeaders: { key: string; label: string }[] = [
     { key: "operation_code", label: "Código Operação" },
-    { key: "machine", label: "Cen. Trabalho" },
+    { key: "machine_type", label: "Tipo de Máquina" },
+    { key: "machine_location", label: "Cen. Trabalho" },
   ];
 
   // Open edit modal from card click
@@ -71,30 +73,48 @@ export default function OrderDetail() {
     }
   };
 
-  // search/filter
+  // search/filter (includes nested machine fields)
   useEffect(() => {
     const t = searchTerm.trim().toLowerCase();
     if (!t) return setFilteredOps(operations);
     const contains = (v: any) => v !== undefined && v !== null && String(v).toLowerCase().includes(t);
-    setFilteredOps(operations.filter((op) => contains(op.operation_code) || contains(op.machine?.machine_type) || contains(op.machine?.machine_location)));
+    setFilteredOps(
+      operations.filter((op) =>
+        contains(op.operation_code) ||
+        contains(op.machine?.machine_type) ||
+        contains(op.machine?.machine_location)
+      )
+    );
   }, [searchTerm, operations]);
 
-  // sorting
+  // sorting (supports nested machine fields)
   const sortedOperations = useMemo(() => {
     if (!sortConfig) return filteredOps;
     const { key, direction } = sortConfig;
+
+    const getValue = (op: Operation) => {
+      if (key === "operation_code") return String(op.operation_code ?? "");
+      if (key === "machine_type") return String(op.machine?.machine_type ?? "");
+      if (key === "machine_location") return String(op.machine?.machine_location ?? "");
+      // fallback: try to read top-level property
+      return String((op as any)[key] ?? "");
+    };
+
     return [...filteredOps].sort((a, b) => {
-      const A = String(a[key] ?? "").toLowerCase();
-      const B = String(b[key] ?? "").toLowerCase();
+      const A = getValue(a).toLowerCase();
+      const B = getValue(b).toLowerCase();
       if (A < B) return direction === "asc" ? -1 : 1;
       if (A > B) return direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredOps, sortConfig]);
 
-  const handleRowDoubleClick = async (order_number: number, op_code: number) => {
+  // fetch operation id (note: operation_code is now string)
+  const handleRowDoubleClick = async (order_number: number, op_code: string) => {
     try {
-      const res = await fetch(`${API_URL}/operations/get_id?order_number=${order_number}&operation_code=${op_code}`);
+      const res = await fetch(
+        `${API_URL}/operations/get_id?order_number=${order_number}&operation_code=${encodeURIComponent(op_code)}`
+      );
       if (!res.ok) throw new Error("Failed to fetch operation ID");
       const id = await res.json();
       navigate(`/operation/${id}`);
@@ -136,11 +156,12 @@ export default function OrderDetail() {
         ))}
       </Row>
 
+      {/* pass current order number so Edit modal can patch by order_number */}
       <EditOrderFieldModal
         show={showEdit}
         onHide={() => setShowEdit(false)}
         apiUrl={API_URL}
-        currentOrderNumber={order.order_number}
+        orderNumber={Number(orderNumber)}
         fieldKey={editKey}
         label={editLabel}
         initialValue={editInitial}
@@ -157,15 +178,25 @@ export default function OrderDetail() {
             <thead>
               <tr>
                 {operationHeaders.map(({ key, label }) => (
-                  <th key={String(key)} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => setSortConfig({ key, direction: sortConfig?.direction === "asc" ? "desc" : "asc" })}>
+                  <th
+                    key={key}
+                    style={{ cursor: "pointer", textAlign: "center" }}
+                    onClick={() =>
+                      setSortConfig({ key, direction: sortConfig?.direction === "asc" ? "desc" : "asc" })
+                    }
+                  >
                     {label}{sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {sortedOperations.map((op, idx) => (
-                <tr key={idx} onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), Number(op.operation_code))} style={{ cursor: "pointer" }}>
+              {sortedOperations.map((op) => (
+                <tr
+                  key={op.id}
+                  onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), op.operation_code)}
+                  style={{ cursor: "pointer" }}
+                >
                   <td className="text-center">{op.operation_code}</td>
                   <td className="text-center">{op.machine?.machine_type ? processTypeLabels[op.machine.machine_type] : "—"}</td>
                   <td className="text-center">{op.machine?.machine_location ?? "—"}</td>
@@ -180,7 +211,15 @@ export default function OrderDetail() {
         + Nova Operação
       </Button>
 
-      <CreateNewOperation orderNumber={Number(orderNumber)} show={showCreateOp} onClose={() => setShowCreateOp(false)} onCreateSuccess={(op) => { setOperations((p) => [...p, op]); setFilteredOps((p) => [...p, op]); }} />
+      <CreateNewOperation
+        orderNumber={Number(orderNumber)}
+        show={showCreateOp}
+        onClose={() => setShowCreateOp(false)}
+        onCreateSuccess={(op) => {
+          setOperations((p) => [...p, op]);
+          setFilteredOps((p) => [...p, op]);
+        }}
+      />
     </div>
   );
 }

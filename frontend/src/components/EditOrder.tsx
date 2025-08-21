@@ -6,7 +6,9 @@ type Props = {
   show: boolean;
   onHide: () => void;
   apiUrl: string;
-  currentOrderNumber: number; // the order we're PATCHing
+  // prefer orderId now (DB uses id). If you still only have order_number, pass it in orderNumber and backend must accept it.
+  currentOrderId?: number;
+  orderNumber?: number;
   fieldKey: string;
   label: string;
   initialValue: any;
@@ -17,7 +19,8 @@ export default function EditOrderFieldModal({
   show,
   onHide,
   apiUrl,
-  currentOrderNumber,
+  currentOrderId,
+  orderNumber,
   fieldKey,
   label,
   initialValue,
@@ -33,22 +36,16 @@ export default function EditOrderFieldModal({
   }, [initialValue, show]);
 
   const convertPayload = (): any => {
-    // numeric fields
     if (["order_number", "material_number", "num_pieces"].includes(fieldKey)) {
       const n = Number(value);
       if (Number.isNaN(n)) throw new Error("Valor numérico inválido.");
       return { [fieldKey]: n };
     }
-
-    // date fields: allow empty to clear
     if (fieldKey === "start_date" || fieldKey === "end_date") {
       if (value === "") return { [fieldKey]: null };
-      // simple YYYY-MM-DD check
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Formato de data inválido (YYYY-MM-DD).");
       return { [fieldKey]: value };
     }
-
-    // default: string or null
     return { [fieldKey]: value === "" ? null : value };
   };
 
@@ -66,15 +63,23 @@ export default function EditOrderFieldModal({
 
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/orders/${currentOrderNumber}`, {
+      // choose URL by ID (preferred) or by order_number (legacy)
+      let url = "";
+      if (currentOrderId) url = `${apiUrl}/orders/${currentOrderId}`;
+      else if (orderNumber) url = `${apiUrl}/orders/${orderNumber}`;
+      else throw new Error("Nenhum identificador da ordem fornecido.");
+
+      const res = await fetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Status ${res.status}`);
       }
+
       const updated: Order = await res.json();
       onSaved(updated);
       onHide();

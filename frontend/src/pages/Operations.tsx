@@ -13,12 +13,14 @@ import {
 import { ArrowLeft } from "react-bootstrap-icons";
 import { processTypeLabels, type Operation, type Task } from "../utils/Types";
 import CreateTask from "../components/CreateTask";
+import EditOperationModal from "../components/EditOperation";
 
 export default function OperationDetail() {
   const { operationId } = useParams<{ operationId: string }>();
   const navigate = useNavigate();
 
   const [operation, setOperation] = useState<Operation | null>(null);
+  const [displayOrderNumber, setDisplayOrderNumber] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,9 +29,16 @@ export default function OperationDetail() {
     direction: "asc" | "desc";
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
+  // Edit operation modal state (we open it for a single field)
+  const [showEditOp, setShowEditOp] = useState(false);
+  const [editOpFieldKey, setEditOpFieldKey] = useState<"operation_code" | "machine_location">(
+    "operation_code"
+  );
+  const [editOpInitial, setEditOpInitial] = useState<any>(null);
+
+  const [error, setError] = useState<string | null>(null);
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
   useEffect(() => {
@@ -46,12 +55,24 @@ export default function OperationDetail() {
         return res.json();
       }),
     ])
-      .then(([operationData, taskData]) => {
+      .then(async ([operationData, taskData]) => {
         setOperation(operationData);
-        // normalize tasks from backend to UI shape if needed; for now we trust backend shape
         const normalized: Task[] = (taskData ?? []).map((t: any) => t);
         setTasks(normalized);
         setFilteredTasks(normalized);
+
+        // fetch order_number for display (operation.order_id -> find order)
+        try {
+          const ordersRes = await fetch(`${API_URL}/orders`);
+          if (ordersRes.ok) {
+            const orders = await ordersRes.json();
+            const found = (orders ?? []).find((o: any) => Number(o.id) === Number(operationData.order_id));
+            if (found && found.order_number) setDisplayOrderNumber(found.order_number);
+            else setDisplayOrderNumber(null);
+          }
+        } catch {
+          setDisplayOrderNumber(null);
+        }
       })
       .catch((err) => {
         console.error(err);
@@ -60,33 +81,17 @@ export default function OperationDetail() {
       .finally(() => setLoading(false));
   }, [operationId, API_URL]);
 
+  // search/filter tasks
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) {
       setFilteredTasks(tasks);
       return;
     }
+    const contains = (val: any) => val !== undefined && val !== null && String(val).toLowerCase().includes(term);
+    setFilteredTasks(tasks.filter((t) => contains(t.process_type) || contains(t.date) || contains(t.operator)));
+  }, [searchTerm, tasks]);
 
-    const contains = (val: any) =>
-      val !== undefined && val !== null && String(val).toLowerCase().includes(term);
-
-    setFilteredTasks(
-      tasks.filter((t) => {
-        return (
-          contains(t.process_type) ||
-          contains(t.date) ||
-          contains(t.operator)
-        );
-      })
-    );
-  }, [searchTerm, tasks, operation]);
-
-  // Double click to task details
-  const handleRowDoubleClick = (taskId: number) => {
-    navigate(`/task/${taskId}`);
-  };
-
-  // Table Headers: added operator column
   const taskHeaders: { key: keyof Task | "operator"; label: string }[] = [
     { key: "process_type", label: "Tipo de Processo" },
     { key: "date", label: "Data" },
@@ -101,14 +106,10 @@ export default function OperationDetail() {
     if (!sortConfig) return filteredTasks;
     return [...filteredTasks].sort((a, b) => {
       const { key, direction } = sortConfig;
-
-      // safe access (some keys may be "operator" or Task fields)
       const aRaw = (a as any)[key] ?? "";
       const bRaw = (b as any)[key] ?? "";
-
       const aVal = String(aRaw).toLowerCase();
       const bVal = String(bRaw).toLowerCase();
-
       if (aVal < bVal) return direction === "asc" ? -1 : 1;
       if (aVal > bVal) return direction === "asc" ? 1 : -1;
       return 0;
@@ -117,65 +118,100 @@ export default function OperationDetail() {
 
   const handleSort = (key: keyof Task | "operator") => {
     let direction: "asc" | "desc" = "asc";
-    if (sortConfig?.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
+    if (sortConfig?.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
   };
 
-  // createdTaskRaw is whatever backend returned; normalize it before using
-  const handleCreateSuccess = (createdTaskRaw: Task | any) => {
-    const normalized = createdTaskRaw;
-    setTasks((prev) => [...prev, normalized]);
-    setFilteredTasks((prev) => [...prev, normalized]);
-    setShowModal(false);
+  // Double click to task details
+  const handleRowDoubleClick = (taskId: number) => {
+    navigate(`/task/${taskId}`);
+  };
+
+  // Open edit modal for a single operation field
+  const openEditForField = (field: "operation_code" | "machine_location", initialVal: any) => {
+    setEditOpFieldKey(field);
+    setEditOpInitial(initialVal);
+    setShowEditOp(true);
+  };
+
+  // When operation edited, update local state and also refresh displayOrderNumber if needed
+  const handleOperationSaved = async (updatedOp: Operation) => {
+    setOperation(updatedOp);
+    // if operation.order_id changed, refresh displayed order number
+    try {
+      const ordersRes = await fetch(`${API_URL}/orders`);
+      if (ordersRes.ok) {
+        const orders = await ordersRes.json();
+        const found = (orders ?? []).find((o: any) => Number(o.id) === Number(updatedOp.order_id));
+        if (found && found.order_number) setDisplayOrderNumber(found.order_number);
+      }
+    } catch {
+      // ignore
+    }
   };
 
   if (loading)
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "60vh" }}
-      >
+      <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
         <Spinner animation="border" />
       </div>
     );
 
   if (error) return <Alert variant="danger">{error}</Alert>;
-
   if (!operation) return <Alert variant="danger">Operação não encontrada</Alert>;
+
+  // Header items: order number & machine type are informational only (not editable here).
+  const headerItems = [
+    { key: "order_number", label: "Nº Ordem", value: displayOrderNumber ?? operation.order_id, editable: false },
+    { key: "operation_code", label: "Código Operação", value: operation.operation_code, editable: true },
+    { key: "machine_type", label: "Tipo Máquina", value: operation.machine?.machine_type ?? "—", editable: false },
+    { key: "machine_location", label: "Cen. Trabalho", value: operation.machine?.machine_location ?? "—", editable: true },
+  ] as const;
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
-      <Button
-        variant="light"
-        className="mb-3 d-flex align-items-center"
-        onClick={() => navigate(-1)}
-      >
-        <ArrowLeft className="me-2" />
-        Voltar
-      </Button>
+      <div className="d-flex justify-content-between align-items-start mb-3">
+        <Button variant="light" className="d-flex align-items-center" onClick={() => navigate(-1)}>
+          <ArrowLeft className="me-2" />
+          Voltar
+        </Button>
+      </div>
 
-      {/* Operation Header */}
+      {/* Header cards — click only editable ones */}
       <Row className="mb-4 gx-3 text-center justify-content-center">
-        {[
-          { label: "Nº Ordem", value: operation.order_id },
-          { label: "Código Operação", value: operation.operation_code },
-          { label: "Tipo Máquina", value: operation.machine?.machine_type },
-          { label: "Machine ID", value: operation.machine?.machine_location },
-        ].map(({ label, value }, idx) => (
-          <Col key={idx} xs={12} sm={6} md={3}>
-            <Card className="p-3">
+        {headerItems.map(({ key, label, value, editable }) => (
+          <Col key={String(key)} xs={12} sm={6} md={3}>
+            <Card
+              className="p-3"
+              style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : 0.9 }}
+              onClick={() => {
+                if (!editable) return;
+                if (key === "operation_code") openEditForField("operation_code", value);
+                else if (key === "machine_location") openEditForField("machine_location", value);
+              }}
+            >
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
-              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                {value ?? "-"}
-              </Card.Text>
+              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value ?? "-"}</Card.Text>
             </Card>
           </Col>
         ))}
       </Row>
 
-      {/* Search Bar */}
+      {/* EditOperation modal edits only the single clicked field */}
+      <EditOperationModal
+        show={showEditOp}
+        onHide={() => setShowEditOp(false)}
+        apiUrl={API_URL}
+        operation={operation}
+        fieldKey={editOpFieldKey}
+        initialValue={editOpInitial}
+        onSaved={(updated) => {
+          handleOperationSaved(updated);
+          setShowEditOp(false);
+        }}
+      />
+
+      {/* Search bar */}
       <Form.Control
         type="search"
         placeholder="Pesquisar tarefas... (tipo de processo, data ou operador)"
@@ -184,7 +220,7 @@ export default function OperationDetail() {
         className="mb-3"
       />
 
-      {/* Tasks Table */}
+      {/* Tasks table */}
       {sortedTasks.length === 0 ? (
         <Alert variant="warning">Nenhuma tarefa encontrada.</Alert>
       ) : (
@@ -193,22 +229,13 @@ export default function OperationDetail() {
             <thead>
               <tr>
                 {taskHeaders.map(({ key, label }) => (
-                  <th
-                    key={label}
-                    style={{ cursor: "pointer", textAlign: "center" }}
-                    onClick={() => handleSort(key)}
-                  >
+                  <th key={label} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => handleSort(key)}>
                     {label}
-                    {sortConfig?.key === key
-                      ? sortConfig.direction === "asc"
-                        ? " ▲"
-                        : " ▼"
-                      : ""}
+                    {sortConfig?.key === key ? (sortConfig.direction === "asc" ? " ▲" : " ▼") : ""}
                   </th>
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {sortedTasks.map((task) => (
                 <tr
@@ -230,22 +257,25 @@ export default function OperationDetail() {
         </div>
       )}
 
-      {/* Floating Button */}
+      {/* Floating Create Task button */}
       <Button
         variant="success"
         className="position-fixed"
         size="lg"
         style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
-        onClick={() => setShowModal(true)}
+        onClick={() => setShowCreateTaskModal(true)}
       >
         + Nova Tarefa
       </Button>
 
       <CreateTask
         operationId={Number(operationId)}
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        onCreateSuccess={handleCreateSuccess}
+        show={showCreateTaskModal}
+        onClose={() => setShowCreateTaskModal(false)}
+        onCreateSuccess={(t) => {
+          setTasks((p) => [...p, t]);
+          setFilteredTasks((p) => [...p, t]);
+        }}
       />
     </div>
   );

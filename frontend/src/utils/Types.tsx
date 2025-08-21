@@ -30,6 +30,16 @@ export type Operation = {
 };
 
 // -------------------------------
+// Operation update type (for PATCH payloads)
+// -------------------------------
+export type OperationUpdate = {
+  operation_code?: string | null;
+  machine_id?: number | null;
+  machine_type?: MachineType | null;
+};
+
+
+// -------------------------------
 // Task type
 // -------------------------------
 export type Task = {

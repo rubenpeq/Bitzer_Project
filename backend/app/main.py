@@ -1,9 +1,9 @@
 # main.py
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import orders, operations, tasks
+from api import orders
 from db.database import Base, engine
-from db.models import Base, OrderDB, OperationDB, TaskDB, ProcessType, MachineType
+from db.models import Base
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -26,5 +26,3 @@ app.add_middleware(
 
 # Include the orders router
 app.include_router(orders.router)
-app.include_router(operations.router)
-app.include_router(tasks.router)

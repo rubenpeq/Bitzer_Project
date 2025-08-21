@@ -48,7 +48,6 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
 
   useEffect(() => {
     if (show) {
-      // Reset when modal opens
       setFormData({
         order_number: "",
         material_number: "",
@@ -77,7 +76,6 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
     setLoading(true);
     setError(null);
 
-    // send null for empty optional dates (so backend receives null instead of "")
     const payload = {
       order_number: Number(formData.order_number),
       material_number: Number(formData.material_number),
@@ -182,20 +180,14 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
             </Col>
           </Form.Group>
 
-          {/* --- Optionals toggle --- */}
           <div className="mb-2 mt-3">
             <div className="d-flex justify-content-center">
-              <Button
-                variant="info"
-                size="sm"
-                onClick={() => setShowOptionals((s) => !s)}
-              >
+              <Button variant="info" size="sm" onClick={() => setShowOptionals((s) => !s)}>
                 {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
               </Button>
             </div>
           </div>
 
-          {/* Optional dates block */}
           {showOptionals && (
             <>
               <Form.Group as={Row} className="mb-3" controlId="startDate">

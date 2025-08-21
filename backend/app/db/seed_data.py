@@ -41,16 +41,21 @@ def random_operator():
 
 # --- Seed machines first ---
 machine_infos = [
-    ("M001", "Lathe"),
-    ("M002", "Milling Machine"),
-    ("M003", "Drill Press"),
-    ("M004", "Grinder"),
-    ("M005", "Welder"),
+    ("M001", "Lathe", MachineType.CNC),
+    ("M002", "Milling Machine", MachineType.CNC),
+    ("M003", "Drill Press", MachineType.CONVENTIONAL),
+    ("M004", "Grinder", MachineType.CONVENTIONAL),
+    ("M005", "Welder", MachineType.CONVENTIONAL),
 ]
 
 machines = []
-for machine_location, name in machine_infos:
-    m = MachineDB(machine_location=machine_location, description=name, machine_id="00")
+for machine_location, name, mtype in machine_infos:
+    m = MachineDB(
+        machine_location=machine_location,
+        description=name,
+        machine_id=f"ID-{machine_location}",
+        machine_type=mtype,
+    )
     session.add(m)
     machines.append(m)
 session.commit()  # commit so machines exist with proper IDs
@@ -73,11 +78,12 @@ for _ in range(num_orders):
     session.add(order)
 
     for _ in range(random.randint(1, 3)):
+        machine = random.choice(machines)
+
         operation = OperationDB(
             order=order,
-            operation_code=random.randint(100, 999),
-            machine_type=random.choice(list(MachineType)),
-            machine_location=random.choice(machines).machine_location
+            operation_code=str(random.randint(100, 999)),
+            machine_id=machine.id
         )
         session.add(operation)
 

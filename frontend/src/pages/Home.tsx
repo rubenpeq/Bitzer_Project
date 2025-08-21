@@ -10,10 +10,7 @@ export default function Home() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof Order;
-    direction: "asc" | "desc";
-  } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Order; direction: "asc" | "desc" } | null>(null);
 
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
@@ -41,55 +38,41 @@ export default function Home() {
   // --- Handle Sorting on Click ---
   function handleSort(key: keyof Order) {
     let direction: "asc" | "desc" = "asc";
-
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
       direction = "desc";
     }
-
     setSortConfig({ key, direction });
   }
 
-  // --- Filter Orders ---
+  // --- Filter Orders (debounced 300ms) ---
   useEffect(() => {
     const timeout = setTimeout(() => {
       const term = searchTerm.trim().toLowerCase();
-
       if (!term) {
         setFilteredOrders(orders);
         return;
       }
-
-      const filtered = orders.filter(
-        (order) =>
-          order.order_number.toString().toLowerCase().includes(term) ||
-          order.material_number.toString().toLowerCase().includes(term)
+      const filtered = orders.filter((order) =>
+        String(order.order_number).toLowerCase().includes(term) ||
+        String(order.material_number).toLowerCase().includes(term)
       );
-
       setFilteredOrders(filtered);
     }, 300);
-
     return () => clearTimeout(timeout);
   }, [searchTerm, orders]);
 
   // --- Sort FilteredOrders ---
   const sortedOrders = useMemo(() => {
     if (!sortConfig) return filteredOrders;
-
     const { key, direction } = sortConfig;
-
     return [...filteredOrders].sort((a, b) => {
-      let aVal = a[key];
-      let bVal = b[key];
+      let aVal: any = a[key];
+      let bVal: any = b[key];
 
-      // Defensive fallback
       if (aVal === undefined || aVal === null) aVal = "";
       if (bVal === undefined || bVal === null) bVal = "";
 
-      // If sorting dates, parse to timestamp
+      // dates
       if (key === "start_date" || key === "end_date") {
         const aDate = Date.parse(aVal as string);
         const bDate = Date.parse(bVal as string);
@@ -99,18 +82,17 @@ export default function Home() {
         return direction === "asc" ? aDate - bDate : bDate - aDate;
       }
 
-      // For other fields, convert to string and compare case-insensitive
-      const aStr = aVal.toString().toLowerCase();
-      const bStr = bVal.toString().toLowerCase();
-
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
       if (aStr < bStr) return direction === "asc" ? -1 : 1;
       if (aStr > bStr) return direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredOrders, sortConfig]);
 
-  // Double click to order details
-  const handleRowDoubleClick = (orderNumber: number) => {
+  // Double click to order details (keeps using order_number so OrderDetail existing route continues to work)
+  const handleRowDoubleClick = (orderNumber?: number) => {
+    if (!orderNumber) return;
     navigate(`/order/${orderNumber}`);
   };
 
@@ -123,10 +105,6 @@ export default function Home() {
     { key: "num_pieces", label: "Nº Peças" },
   ];
 
-  // Modal controls
-  const handleShowModal = () => setShowModal(true);
-  const handleCloseModal = () => setShowModal(false);
-
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
       <Form.Control
@@ -138,13 +116,10 @@ export default function Home() {
       />
 
       {loading ? (
-        <div
-          className="d-flex justify-content-center align-items-center"
-          style={{ height: "60vh" }}
-        >
+        <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
           <Spinner animation="border" role="status" />
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : sortedOrders.length === 0 ? (
         <Alert variant="warning">Nenhum pedido encontrado.</Alert>
       ) : (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
@@ -152,17 +127,9 @@ export default function Home() {
             <thead>
               <tr>
                 {orderHeaders.map(({ key, label }) => (
-                  <th
-                    key={key}
-                    style={{ cursor: "pointer", textAlign: "center" }}
-                    onClick={() => handleSort(key)}
-                  >
+                  <th key={key} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => handleSort(key)}>
                     {label}{" "}
-                    {sortConfig?.key === key
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : ""}
+                    {sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
                   </th>
                 ))}
               </tr>
@@ -170,7 +137,7 @@ export default function Home() {
             <tbody>
               {sortedOrders.map((order, index) => (
                 <tr
-                  key={order.order_number ?? index}
+                  key={order.id ?? index}
                   onDoubleClick={() => handleRowDoubleClick(order.order_number)}
                   style={{ cursor: "pointer" }}
                 >
@@ -191,14 +158,14 @@ export default function Home() {
         className="position-fixed"
         size="lg"
         style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
-        onClick={handleShowModal}
+        onClick={() => setShowModal(true)}
       >
         + Nova Ordem
       </Button>
 
       <CreateNewOrder
         show={showModal}
-        onClose={handleCloseModal}
+        onClose={() => setShowModal(false)}
         onCreateSuccess={(createdOrder) => {
           setOrders((prev) => [...prev, createdOrder]);
           setFilteredOrders((prev) => [...prev, createdOrder]);

@@ -1,6 +1,11 @@
+// src/components/CreateTask.tsx
 import { useEffect, useState } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import type { Task, TaskCreate } from "../utils/Types";
+
+// Allowed process types (string literals)
+const VALID_PROCESS_TYPES = ["PREPARATION", "QUALITY_CONTROL", "PROCESSING"] as const;
+type ProcessTypeStr = typeof VALID_PROCESS_TYPES[number];
 
 type CreateTaskProps = {
   operationId: number;
@@ -9,20 +14,33 @@ type CreateTaskProps = {
   onCreateSuccess: (newTask: Task) => void;
 };
 
+// UI form shape (permissive so we can store "")
+type TaskForm = {
+  process_type: string; // plain string for UI; validated on submit
+  operator?: string;
+  date?: string;
+  start_time?: string;
+  end_time?: string;
+  good_pieces?: number | "";
+  bad_pieces?: number | "";
+};
+
 export default function CreateTask({
   operationId,
   show,
   onClose,
   onCreateSuccess,
 }: CreateTaskProps) {
-  // helper for today's date in YYYY-MM-DD
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  // form state (optional fields may be undefined)
-  const [task, setTask] = useState<TaskCreate>({
+  const [task, setTask] = useState<TaskForm>({
     process_type: "",
     operator: "",
     date: todayDate,
+    start_time: "",
+    end_time: "",
+    good_pieces: "",
+    bad_pieces: "",
   });
 
   const [showOptionals, setShowOptionals] = useState(false);
@@ -31,60 +49,87 @@ export default function CreateTask({
 
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
-  // Reset form whenever modal opens/closes
   useEffect(() => {
     if (show) {
       setTask({
         process_type: "",
         operator: "",
-        date: todayDate, // default date set to today
+        date: todayDate,
+        start_time: "",
+        end_time: "",
+        good_pieces: "",
+        bad_pieces: "",
       });
       setShowOptionals(false);
       setError(null);
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, todayDate]);
 
-  const cleanPayload = (payload: TaskCreate) => {
-    // Remove empty-string properties, keep numbers & defined values.
-    const copy: any = { ...payload };
-    if (!copy.date) delete copy.date;
-    if (!copy.start_time) delete copy.start_time;
-    if (!copy.end_time) delete copy.end_time;
-    if (copy.good_pieces === "" || copy.good_pieces === undefined)
-      delete copy.good_pieces;
-    if (copy.bad_pieces === "" || copy.bad_pieces === undefined)
-      delete copy.bad_pieces;
-    if (copy.operator === "" || copy.operator === undefined)
-      delete copy.operator;
-    return copy;
+  // Convert and clean TaskForm -> TaskCreate
+  const buildPayload = (): TaskCreate => {
+    // Validate process type
+    if (!VALID_PROCESS_TYPES.includes(task.process_type as ProcessTypeStr)) {
+      throw new Error("Tipo de processo inválido.");
+    }
+
+    const payload: any = {
+      process_type: task.process_type as ProcessTypeStr,
+    };
+
+    if (task.operator && task.operator.trim() !== "") payload.operator = task.operator.trim();
+    if (task.date && task.date.trim() !== "") payload.date = task.date;
+    if (task.start_time && task.start_time.trim() !== "") payload.start_time = task.start_time;
+    if (task.end_time && task.end_time.trim() !== "") payload.end_time = task.end_time;
+
+    if (task.good_pieces !== "" && task.good_pieces !== undefined) {
+      const gp = Number(task.good_pieces);
+      if (!Number.isNaN(gp)) payload.good_pieces = gp;
+    }
+    if (task.bad_pieces !== "" && task.bad_pieces !== undefined) {
+      const bp = Number(task.bad_pieces);
+      if (!Number.isNaN(bp)) payload.bad_pieces = bp;
+    }
+
+    return payload as TaskCreate;
   };
 
   const handleCreate = async () => {
     setError(null);
 
-    // Basic validation
+    // Basic validation (process_type required)
     if (!task.process_type || task.process_type.trim() === "") {
       setError("O campo 'Tipo de Processo' é obrigatório.");
+      return;
+    }
+    if (!VALID_PROCESS_TYPES.includes(task.process_type as ProcessTypeStr)) {
+      setError("Tipo de processo inválido.");
       return;
     }
 
     setLoading(true);
     try {
-      const payload = cleanPayload(task);
+      const payload = buildPayload();
 
-      const res = await fetch(`${API_URL}/create-task/${operationId}`, {
+      // NOTE: new endpoint per your backend: POST /operations/{operation_id}/tasks
+      const res = await fetch(`${API_URL}/operations/${operationId}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        // try to parse JSON error, fallback to text
+        // try to surface backend error details (Pydantic / FastAPI will often put explanation in JSON)
         let msg = "Erro ao criar tarefa.";
         try {
           const data = await res.json();
-          msg = data.detail || JSON.stringify(data) || msg;
+          // common FastAPI error shape: {"detail": "..."} or validation errors array
+          if (data?.detail) {
+            msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+          } else {
+            msg = JSON.stringify(data);
+          }
         } catch {
           const txt = await res.text();
           msg = txt || msg;
@@ -92,18 +137,18 @@ export default function CreateTask({
         throw new Error(msg);
       }
 
-      const createdTask = await res.json();
+      const createdTask: Task = await res.json();
       onCreateSuccess(createdTask);
       onClose();
     } catch (err: any) {
-      setError(err.message || "Erro inesperado ao criar tarefa.");
+      setError(err?.message || "Erro inesperado ao criar tarefa.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal show={show} onHide={onClose}>
+    <Modal show={show} onHide={onClose} centered>
       <Modal.Header closeButton>
         <Modal.Title>Nova Tarefa</Modal.Title>
       </Modal.Header>
@@ -112,7 +157,6 @@ export default function CreateTask({
         {error && <Alert variant="danger">{error}</Alert>}
 
         <Form>
-          {/* Process type (required) */}
           <Form.Group className="mb-3">
             <Form.Label>Tipo de Processo</Form.Label>
             <Form.Select
@@ -121,14 +165,13 @@ export default function CreateTask({
                 setTask((prev) => ({ ...prev, process_type: e.target.value }))
               }
             >
-              <option value="" disabled>
-                Selecione um tipo de processo
-              </option>
+              <option value="">Selecione um tipo de processo</option>
               <option value="PREPARATION">Preparação de Máquina</option>
               <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
               <option value="PROCESSING">Processamento</option>
             </Form.Select>
-            <Form.Label>Operador</Form.Label>
+
+            <Form.Label className="mt-3">Operador</Form.Label>
             <Form.Control
               type="text"
               placeholder="Nome do operador"
@@ -139,7 +182,6 @@ export default function CreateTask({
             />
           </Form.Group>
 
-          {/* Toggle optionals */}
           <div className="mb-2">
             <div className="d-flex justify-content-center">
               <Button
@@ -152,7 +194,6 @@ export default function CreateTask({
             </div>
           </div>
 
-          {/* Optionals block */}
           {showOptionals && (
             <>
               <Row className="mb-3">
@@ -172,10 +213,7 @@ export default function CreateTask({
                     type="time"
                     value={task.start_time ?? ""}
                     onChange={(e) =>
-                      setTask((prev) => ({
-                        ...prev,
-                        start_time: e.target.value,
-                      }))
+                      setTask((prev) => ({ ...prev, start_time: e.target.value }))
                     }
                   />
                 </Col>
@@ -197,18 +235,12 @@ export default function CreateTask({
                   <Form.Control
                     type="number"
                     min={0}
-                    value={
-                      task.good_pieces === undefined
-                        ? ""
-                        : String(task.good_pieces)
-                    }
+                    value={task.good_pieces === "" ? "" : String(task.good_pieces)}
                     onChange={(e) =>
                       setTask((prev) => ({
                         ...prev,
                         good_pieces:
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value),
+                          e.target.value === "" ? "" : Number(e.target.value),
                       }))
                     }
                   />
@@ -218,18 +250,12 @@ export default function CreateTask({
                   <Form.Control
                     type="number"
                     min={0}
-                    value={
-                      task.bad_pieces === undefined
-                        ? ""
-                        : String(task.bad_pieces)
-                    }
+                    value={task.bad_pieces === "" ? "" : String(task.bad_pieces)}
                     onChange={(e) =>
                       setTask((prev) => ({
                         ...prev,
                         bad_pieces:
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value),
+                          e.target.value === "" ? "" : Number(e.target.value),
                       }))
                     }
                   />

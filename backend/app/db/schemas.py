@@ -23,6 +23,7 @@ class MachineBase(BaseModel):
     machine_location: str
     description: str
     machine_id: str
+    machine_type: MachineType
 
 
 class MachineCreate(MachineBase):
@@ -33,6 +34,7 @@ class MachineUpdate(BaseModel):
     machine_id: Optional[str] = None
     description: Optional[str] = None
     machine_location: Optional[str] = None
+    machine_type: Optional[MachineType] = None
 
 
 class Machine(MachineBase):
@@ -83,8 +85,7 @@ class Task(TaskBase):
 class OperationBase(BaseModel):
     order_id: int
     operation_code: str
-    machine_type: MachineType
-    machine_id: Optional[int] = None
+    machine_id: Optional[int] = None  # FK to machinesdb.id
 
 
 class OperationCreate(OperationBase):
@@ -94,14 +95,13 @@ class OperationCreate(OperationBase):
 class OperationUpdate(BaseModel):
     order_id: Optional[int] = None
     operation_code: Optional[str] = None
-    machine_type: Optional[MachineType] = None
     machine_id: Optional[int] = None
 
 
 class Operation(OperationBase):
     id: int
     tasks: List[Task] = []
-    machine: Optional[Machine] = None
+    machine: Optional[Machine] = None  # relationship
 
     class Config:
         from_attributes = True
