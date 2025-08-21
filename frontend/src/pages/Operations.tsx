@@ -1,4 +1,3 @@
-// frontend/src/pages/Operations.tsx
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -10,6 +9,7 @@ import {
   Col,
   Card,
   Form,
+  ProgressBar
 } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
 import { processTypeLabels, type Operation, type Task } from "../utils/Types";
@@ -223,11 +223,6 @@ export default function OperationDetail() {
   if (error) return <Alert variant="danger">{error}</Alert>;
   if (!operation) return <Alert variant="danger">Operação não encontrada</Alert>;
 
-  const totalPiecesProgress = (() => {
-    const total = piecesSummary?.total_pieces ?? 0;
-    return orderNumPieces ? `${total}/${orderNumPieces}` : `${total}/—`;
-  })();
-
   // Header items: order number & machine type are informational only (not editable here).
   // the progress card is shown as a small card in the header row
   const headerItems = [
@@ -235,7 +230,7 @@ export default function OperationDetail() {
     { key: "operation_code", label: "Código Operação", value: operation.operation_code, editable: true },
     { key: "machine_type", label: "Tipo Máquina", value: operation.machine?.machine_type ?? "—", editable: false },
     { key: "machine_location", label: "Cen. Trabalho", value: operation.machine?.machine_location ?? "—", editable: true },
-    { key: "total_pieces", label: "Progresso", value: totalPiecesProgress ?? "—", editable: false }
+    { key: "total_pieces", label: "Progresso", value: null, editable: false }
   ] as const;
 
   return (
@@ -250,18 +245,60 @@ export default function OperationDetail() {
       {/* Header cards — click only editable ones */}
       <Row className="mb-4 gx-3 text-center justify-content-center align-items-stretch">
         {headerItems.map(({ key, label, value, editable }) => (
-            <Col key={String(key)} xs={12} sm={6} md={2}>
+          <Col key={String(key)} xs={12} sm={6} md={2}>
             <Card
               className="p-3 h-100"
-              style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : 0.95 }}
+              style={{
+                cursor: editable ? "pointer" : "default",
+                opacity: editable ? 1 : 0.95,
+              }}
               onClick={() => {
                 if (!editable) return;
-                if (key === "operation_code") openEditForField("operation_code", value);
-                else if (key === "machine_location") openEditForField("machine_location", value);
+                if (key === "operation_code")
+                  openEditForField("operation_code", value);
+                else if (key === "machine_location")
+                  openEditForField("machine_location", value);
               }}
             >
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
-              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value ?? "-"}</Card.Text>
+
+              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem", position: "relative" }}>
+                {key === "total_pieces" && piecesSummary ? (
+                  <div style={{ position: "relative" }}>
+                    <ProgressBar
+                      now={
+                        orderNumPieces
+                          ? Math.min((piecesSummary.total_pieces / orderNumPieces) * 100, 100)
+                          : 0
+                      }
+                      variant={
+                        orderNumPieces && piecesSummary.total_pieces > orderNumPieces
+                          ? "danger"
+                          : "success"
+                      }
+                      style={{ height: "1.8rem" }}
+                    />
+                    {/* Label overlay */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        fontWeight: "bold",
+                        color: "black",
+                      }}
+                    >
+                      {`${piecesSummary.total_pieces}/${orderNumPieces ?? "—"}`}
+                    </div>
+                  </div>
+                ) : (
+                  value ?? "-"
+                )}
+              </Card.Text>
             </Card>
           </Col>
         ))}
