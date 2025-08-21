@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button, Spinner, Alert, Row, Col, Card, Form } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
 import { type Task, processTypeLabels } from "../utils/Types";
+import EditTask from "../components/EditTask";
 
 /** --- Helpers --- **/
 const formatLocalTime = (d: Date) => {
@@ -12,7 +13,6 @@ const formatLocalTime = (d: Date) => {
   return `${hh}:${mm}:${ss}`;
 };
 
-// Format seconds to HH:MM:SS
 const formatDuration = (seconds: number) => {
   const hh = Math.floor(seconds / 3600);
   const mm = Math.floor((seconds % 3600) / 60);
@@ -20,11 +20,9 @@ const formatDuration = (seconds: number) => {
   return [hh, mm, ss].map((v) => String(v).padStart(2, "0")).join(":");
 };
 
-// Parse "HH:MM:SS" or "HH:MM:SS.sss" to seconds since midnight
-// Accepts string | null | undefined to satisfy TS strictness
 const parseTimeToSeconds = (timeStr?: string | null): number => {
   if (!timeStr) return 0;
-  const main = String(timeStr).split(".")[0]; // drop milliseconds if present
+  const main = String(timeStr).split(".")[0];
   const parts = main.split(":").map((p) => Number(p));
   if (parts.length < 3) return 0;
   const [hh, mm, ss] = parts;
@@ -47,9 +45,14 @@ export default function TaskDetail() {
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
   const timerRef = useRef<number | null>(null);
 
+  // edit modal
+  const [showEdit, setShowEdit] = useState(false);
+  const [editFieldKey, setEditFieldKey] = useState<string>("");
+  const [editLabel, setEditLabel] = useState<string>("");
+  const [editInitial, setEditInitial] = useState<any>(null);
+
   const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
-  // Load task
   useEffect(() => {
     if (!taskId) {
       setError("Task ID inválido");
@@ -95,7 +98,6 @@ export default function TaskDetail() {
     };
 
     fetchTask();
-    // cleanup on unmount
     return () => {
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
@@ -106,14 +108,12 @@ export default function TaskDetail() {
 
   // Manage timer interval: when task.start_time exists and end_time is null => run timer
   useEffect(() => {
-    // clear existing
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
     if (task?.start_time && !task?.end_time) {
-      // ensure timerSeconds is already set appropriately before starting
       timerRef.current = window.setInterval(() => {
         setTimerSeconds((prev) => prev + 1);
       }, 1000);
@@ -127,9 +127,10 @@ export default function TaskDetail() {
     };
   }, [task?.start_time, task?.end_time]);
 
+  // unified update wrapper: uses your current API (PUT /tasks/{id})
   const updateTaskOnServer = async (payload: Record<string, any>) => {
     if (!task) throw new Error("Tarefa não carregada");
-    const res = await fetch(`${API_URL}/update-task/${task.id}`, {
+    const res = await fetch(`${API_URL}/tasks/${task.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -139,7 +140,7 @@ export default function TaskDetail() {
       throw new Error(`(${res.status}) ${text}`);
     }
     const data = await res.json();
-    return data;
+    return data as Task;
   };
 
   const handleStartStop = async () => {
@@ -153,8 +154,6 @@ export default function TaskDetail() {
         setLoading(true);
         const updated = await updateTaskOnServer({ start_time: now });
         setTask(updated);
-
-        // set timerSeconds to 0 (start counting from zero)
         setTimerSeconds(0);
       } catch (err: any) {
         setError(err.message || "Erro ao iniciar a tarefa");
@@ -169,7 +168,6 @@ export default function TaskDetail() {
         const updated = await updateTaskOnServer({ end_time: now });
         setTask(updated);
 
-        // compute final duration: end - start (server returned values)
         const startSec = parseTimeToSeconds(updated.start_time);
         const endSec = parseTimeToSeconds(updated.end_time);
         setTimerSeconds(Math.max(0, endSec - startSec));
@@ -185,13 +183,12 @@ export default function TaskDetail() {
     if (!task) return;
     setError(null);
 
-    const goodVal =
-      typeof goodPiecesInput === "number" ? goodPiecesInput : null;
+    const goodVal = typeof goodPiecesInput === "number" ? goodPiecesInput : null;
     const badVal = typeof badPiecesInput === "number" ? badPiecesInput : null;
 
     try {
       setLoading(true);
-      // send server-friendly keys (good_pieces / bad_pieces)
+      // PUT /tasks/{id} expects TaskUpdate shape; send only changed fields
       const updated = await updateTaskOnServer({
         good_pieces: goodVal,
         bad_pieces: badVal,
@@ -206,12 +203,25 @@ export default function TaskDetail() {
     }
   };
 
+  // open edit modal for a single field
+  const openEditModal = (fieldKey: string, label: string, initial: any) => {
+    setEditFieldKey(fieldKey);
+    setEditLabel(label);
+    setEditInitial(initial);
+    setShowEdit(true);
+  };
+
+  // handler after EditTask returns updated task
+  const handleTaskSaved = (updated: Task) => {
+    setTask(updated);
+    // keep inputs consistent
+    setGoodPiecesInput(updated.good_pieces ?? "");
+    setBadPiecesInput(updated.bad_pieces ?? "");
+  };
+
   if (loading)
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "60vh" }}
-      >
+      <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
         <Spinner animation="border" />
       </div>
     );
@@ -220,56 +230,59 @@ export default function TaskDetail() {
 
   if (!task) return <Alert variant="danger">Tarefa não encontrada</Alert>;
 
-  const processedLabel =
-    processTypeLabels[task.process_type] ?? task.process_type ?? "-";
-
+  const processedLabel = processTypeLabels[task.process_type] ?? task.process_type ?? "-";
   const piecesEditable = Boolean(task.start_time && task.end_time);
 
-  // Determine button color and label based on task state
   let btnVariant: "success" | "danger" | "primary" = "success";
   let btnLabel = "Iniciar";
-
   if (!task.start_time) {
-    btnVariant = "success"; // green before start
+    btnVariant = "success";
     btnLabel = "Iniciar";
   } else if (task.start_time && !task.end_time) {
-    btnVariant = "danger"; // red during running
+    btnVariant = "danger";
     btnLabel = "Parar";
   } else {
-    btnVariant = "primary"; // blue finished
+    btnVariant = "primary";
     btnLabel = "Concluído";
   }
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
-      <Button
-        variant="light"
-        className="mb-3 d-flex align-items-center"
-        onClick={() => navigate(-1)}
-      >
-        <ArrowLeft className="me-2" />
-        Voltar
+      <Button variant="light" className="mb-3 d-flex align-items-center" onClick={() => navigate(-1)}>
+        <ArrowLeft className="me-2" /> Voltar
       </Button>
 
-      {/* Task Info */}
+      {/* Task Info — click individual card to edit that single field */}
       <Row className="mb-4 text-center justify-content-center gx-3">
         {[
-          { label: "Data", value: task.date },
-          { label: "Tipo de Processo", value: processedLabel },
-          { label: "Início", value: task.start_time ?? "--:--:--" },
-          { label: "Fim", value: task.end_time ?? "--:--:--" },
-          { label: "Operador", value: task.operator ?? "Sem Operador"}
-        ].map(({ label, value }, idx) => (
+          { key: "date", label: "Data", value: task.date },
+          { key: "process_type", label: "Tipo de Processo", value: processedLabel },
+          { key: "start_time", label: "Início", value: task.start_time ?? "--:--:--" },
+          { key: "end_time", label: "Fim", value: task.end_time ?? "--:--:--" },
+          { key: "operator", label: "Operador", value: task.operator ?? "Sem Operador" },
+        ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
-            <Card className="p-3">
+            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(String(key), label, value === "--:--:--" ? "" : value)}>
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
-              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                {value}
-              </Card.Text>
+              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value}</Card.Text>
             </Card>
           </Col>
         ))}
       </Row>
+
+      <EditTask
+        show={showEdit}
+        onHide={() => setShowEdit(false)}
+        apiUrl={API_URL}
+        taskId={task.id}
+        fieldKey={editFieldKey}
+        label={editLabel}
+        initialValue={editInitial}
+        onSaved={(updatedTask) => {
+          handleTaskSaved(updatedTask);
+          setShowEdit(false);
+        }}
+      />
 
       {/* Start/Stop Button */}
       <div className="text-center mb-4">
@@ -283,48 +296,25 @@ export default function TaskDetail() {
             fontWeight: "bold",
           }}
           onClick={handleStartStop}
-          disabled={
-            Boolean(loading) ||
-            (Boolean(task.start_time) && Boolean(task.end_time))
-          }
+          disabled={Boolean(loading) || (Boolean(task.start_time) && Boolean(task.end_time))}
         >
           {btnLabel}
-          <br></br>
+          <br />
           {formatDuration(timerSeconds)}
         </Button>
       </div>
 
       {/* Pieces Inputs — very small centered row */}
-      <div
-        className="position-fixed start-0 end-0 p-3 shadow"
-        style={{
-          bottom: "10px", // little distance from the bottom
-          zIndex: 1030,
-        }}
-      >
-        <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSavePieces();
-          }}
-        >
+      <div className="position-fixed start-0 end-0 p-3 shadow" style={{ bottom: "10px", zIndex: 1030 }}>
+        <Form onSubmit={(e) => { e.preventDefault(); handleSavePieces(); }}>
           <Row className="justify-content-center align-items-end">
             <Col xs={4} sm={3} md={2}>
               <Form.Group controlId="goodPieces">
-                <Form.Label
-                  className="w-100 text-center"
-                  style={{ fontSize: "0.85rem" }}
-                >
-                  Peças Boas
-                </Form.Label>
+                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>Peças Boas</Form.Label>
                 <Form.Control
                   type="number"
                   value={goodPiecesInput}
-                  onChange={(e) =>
-                    setGoodPiecesInput(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
+                  onChange={(e) => setGoodPiecesInput(e.target.value === "" ? "" : Number(e.target.value))}
                   disabled={!piecesEditable}
                   min={0}
                 />
@@ -333,20 +323,11 @@ export default function TaskDetail() {
 
             <Col xs={4} sm={3} md={2}>
               <Form.Group controlId="badPieces">
-                <Form.Label
-                  className="w-100 text-center"
-                  style={{ fontSize: "0.85rem" }}
-                >
-                  Peças Defetivas
-                </Form.Label>
+                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>Peças Defetivas</Form.Label>
                 <Form.Control
                   type="number"
                   value={badPiecesInput}
-                  onChange={(e) =>
-                    setBadPiecesInput(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
+                  onChange={(e) => setBadPiecesInput(e.target.value === "" ? "" : Number(e.target.value))}
                   disabled={!piecesEditable}
                   min={0}
                 />
@@ -354,13 +335,7 @@ export default function TaskDetail() {
             </Col>
 
             <Col xs="auto">
-              <Button
-                type="submit"
-                variant="success"
-                disabled={!piecesEditable}
-              >
-                Salvar
-              </Button>
+              <Button type="submit" variant="success" disabled={!piecesEditable}>Salvar</Button>
             </Col>
           </Row>
         </Form>
