@@ -1,3 +1,4 @@
+// frontend/src/pages/Operations.tsx
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -18,9 +19,12 @@ import EditOperationModal from "../components/EditOperation";
 export default function OperationDetail() {
   const { operationId } = useParams<{ operationId: string }>();
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
   const [operation, setOperation] = useState<Operation | null>(null);
   const [displayOrderNumber, setDisplayOrderNumber] = useState<number | null>(null);
+  const [orderNumPieces, setOrderNumPieces] = useState<number | null>(null);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,46 +43,87 @@ export default function OperationDetail() {
   const [editOpInitial, setEditOpInitial] = useState<any>(null);
 
   const [error, setError] = useState<string | null>(null);
-  const API_URL = import.meta.env.VITE_FASTAPI_URL;
+
+  // pieces summary from backend for this operation
+  const [piecesSummary, setPiecesSummary] = useState<{
+    total_pieces: number;
+    good_pieces: number;
+    bad_pieces: number;
+  } | null>(null);
+
+  // fetch pieces summary helper
+  const refreshPiecesSummary = async (opId: string | number) => {
+    try {
+      const res = await fetch(`${API_URL}/operations/${opId}/pieces`);
+      if (!res.ok) {
+        // clear or keep existing depending on your preference; here we'll clear
+        setPiecesSummary(null);
+        return;
+      }
+      const json = await res.json();
+      setPiecesSummary({
+        total_pieces: Number(json.total_pieces ?? 0),
+        good_pieces: Number(json.good_pieces ?? 0),
+        bad_pieces: Number(json.bad_pieces ?? 0),
+      });
+    } catch (e) {
+      console.warn("Failed to fetch pieces summary:", e);
+      setPiecesSummary(null);
+    }
+  };
 
   useEffect(() => {
+    if (!operationId) return;
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      fetch(`${API_URL}/operation/${operationId}`).then((res) => {
-        if (!res.ok) throw new Error("Erro ao buscar operação");
-        return res.json();
-      }),
-      fetch(`${API_URL}/operations/${operationId}/tasks`).then((res) => {
-        if (!res.ok) throw new Error("Erro ao buscar tarefas");
-        return res.json();
-      }),
-    ])
-      .then(async ([operationData, taskData]) => {
+    (async () => {
+      try {
+        // load operation
+        const opRes = await fetch(`${API_URL}/operation/${operationId}`);
+        if (!opRes.ok) throw new Error("Erro ao buscar operação");
+        const operationData = await opRes.json();
         setOperation(operationData);
+
+        // load tasks
+        const tRes = await fetch(`${API_URL}/operations/${operationId}/tasks`);
+        if (!tRes.ok) throw new Error("Erro ao buscar tarefas");
+        const taskData = await tRes.json();
         const normalized: Task[] = (taskData ?? []).map((t: any) => t);
         setTasks(normalized);
         setFilteredTasks(normalized);
 
-        // fetch order_number for display (operation.order_id -> find order)
+        // fetch the order list to find order_number and num_pieces for this operation.order_id
         try {
-          const ordersRes = await fetch(`${API_URL}/orders`);
-          if (ordersRes.ok) {
-            const orders = await ordersRes.json();
-            const found = (orders ?? []).find((o: any) => Number(o.id) === Number(operationData.order_id));
-            if (found && found.order_number) setDisplayOrderNumber(found.order_number);
-            else setDisplayOrderNumber(null);
+          if (operationData?.order_id) {
+            const ordersRes = await fetch(`${API_URL}/orders`);
+            if (ordersRes.ok) {
+              const orders = await ordersRes.json();
+              const found = (orders ?? []).find((o: any) => Number(o.id) === Number(operationData.order_id));
+              if (found) {
+                if (found.order_number) setDisplayOrderNumber(Number(found.order_number));
+                if (found.num_pieces !== undefined && found.num_pieces !== null) setOrderNumPieces(Number(found.num_pieces));
+              } else {
+                setDisplayOrderNumber(null);
+                setOrderNumPieces(null);
+              }
+            }
           }
-        } catch {
+        } catch (e) {
+          console.warn("Could not fetch orders for order_number/num_pieces:", e);
           setDisplayOrderNumber(null);
+          setOrderNumPieces(null);
         }
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message || "Erro ao buscar dados");
-      })
-      .finally(() => setLoading(false));
+
+        // fetch pieces summary
+        await refreshPiecesSummary(operationId);
+      } catch (e: any) {
+        console.error(e);
+        setError(e.message || "Erro ao buscar dados");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [operationId, API_URL]);
 
   // search/filter tasks
@@ -105,7 +150,7 @@ export default function OperationDetail() {
   const sortedTasks = useMemo(() => {
     if (!sortConfig) return filteredTasks;
     return [...filteredTasks].sort((a, b) => {
-      const { key, direction } = sortConfig;
+      const { key, direction } = sortConfig!;
       const aRaw = (a as any)[key] ?? "";
       const bRaw = (b as any)[key] ?? "";
       const aVal = String(aRaw).toLowerCase();
@@ -134,20 +179,38 @@ export default function OperationDetail() {
     setShowEditOp(true);
   };
 
-  // When operation edited, update local state and also refresh displayOrderNumber if needed
+  // When operation edited, update local state and also refresh order/pieces info
   const handleOperationSaved = async (updatedOp: Operation) => {
     setOperation(updatedOp);
-    // if operation.order_id changed, refresh displayed order number
+    // refresh order info (order_number, num_pieces)
     try {
-      const ordersRes = await fetch(`${API_URL}/orders`);
-      if (ordersRes.ok) {
-        const orders = await ordersRes.json();
-        const found = (orders ?? []).find((o: any) => Number(o.id) === Number(updatedOp.order_id));
-        if (found && found.order_number) setDisplayOrderNumber(found.order_number);
+      if (updatedOp?.order_id) {
+        const ordersRes = await fetch(`${API_URL}/orders`);
+        if (ordersRes.ok) {
+          const orders = await ordersRes.json();
+          const found = (orders ?? []).find((o: any) => Number(o.id) === Number(updatedOp.order_id));
+          if (found) {
+            if (found.order_number) setDisplayOrderNumber(Number(found.order_number));
+            if (found.num_pieces !== undefined && found.num_pieces !== null) setOrderNumPieces(Number(found.num_pieces));
+          }
+        }
       }
     } catch {
       // ignore
     }
+
+    // refresh pieces summary for this operation
+    await refreshPiecesSummary(updatedOp.id);
+  };
+
+  // after creating a task: add to local list and refresh pieces summary
+  const handleCreateTaskSuccess = (t: Task) => {
+    setTasks((p) => [...p, t]);
+    setFilteredTasks((p) => [...p, t]);
+    if (operationId !== undefined) {
+      refreshPiecesSummary(operationId);
+    }
+    setShowCreateTaskModal(false);
   };
 
   if (loading)
@@ -160,12 +223,19 @@ export default function OperationDetail() {
   if (error) return <Alert variant="danger">{error}</Alert>;
   if (!operation) return <Alert variant="danger">Operação não encontrada</Alert>;
 
+  const totalPiecesProgress = (() => {
+    const total = piecesSummary?.total_pieces ?? 0;
+    return orderNumPieces ? `${total}/${orderNumPieces}` : `${total}/—`;
+  })();
+
   // Header items: order number & machine type are informational only (not editable here).
+  // the progress card is shown as a small card in the header row
   const headerItems = [
     { key: "order_number", label: "Nº Ordem", value: displayOrderNumber ?? operation.order_id, editable: false },
     { key: "operation_code", label: "Código Operação", value: operation.operation_code, editable: true },
     { key: "machine_type", label: "Tipo Máquina", value: operation.machine?.machine_type ?? "—", editable: false },
     { key: "machine_location", label: "Cen. Trabalho", value: operation.machine?.machine_location ?? "—", editable: true },
+    { key: "total_pieces", label: "Progresso", value: totalPiecesProgress ?? "—", editable: false }
   ] as const;
 
   return (
@@ -178,12 +248,12 @@ export default function OperationDetail() {
       </div>
 
       {/* Header cards — click only editable ones */}
-      <Row className="mb-4 gx-3 text-center justify-content-center">
+      <Row className="mb-4 gx-3 text-center justify-content-center align-items-stretch">
         {headerItems.map(({ key, label, value, editable }) => (
-          <Col key={String(key)} xs={12} sm={6} md={3}>
+            <Col key={String(key)} xs={12} sm={6} md={2}>
             <Card
-              className="p-3"
-              style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : 0.9 }}
+              className="p-3 h-100"
+              style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : 0.95 }}
               onClick={() => {
                 if (!editable) return;
                 if (key === "operation_code") openEditForField("operation_code", value);
@@ -238,11 +308,7 @@ export default function OperationDetail() {
             </thead>
             <tbody>
               {sortedTasks.map((task) => (
-                <tr
-                  key={task.id}
-                  onDoubleClick={() => handleRowDoubleClick(task.id)}
-                  style={{ cursor: "pointer" }}
-                >
+                <tr key={task.id} onDoubleClick={() => handleRowDoubleClick(task.id)} style={{ cursor: "pointer" }}>
                   <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
                   <td>{task.date}</td>
                   <td>{task.start_time ?? "--:--:--"}</td>
@@ -268,15 +334,7 @@ export default function OperationDetail() {
         + Nova Tarefa
       </Button>
 
-      <CreateTask
-        operationId={Number(operationId)}
-        show={showCreateTaskModal}
-        onClose={() => setShowCreateTaskModal(false)}
-        onCreateSuccess={(t) => {
-          setTasks((p) => [...p, t]);
-          setFilteredTasks((p) => [...p, t]);
-        }}
-      />
+      <CreateTask operationId={Number(operationId)} show={showCreateTaskModal} onClose={() => setShowCreateTaskModal(false)} onCreateSuccess={handleCreateTaskSuccess} />
     </div>
   );
 }

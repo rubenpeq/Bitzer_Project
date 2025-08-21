@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 
 from db.database import SessionLocal
@@ -280,6 +281,34 @@ def delete_operation(operation_id: int, db: Session = Depends(get_db)):
     db.delete(op)
     db.commit()
     return None
+
+@router.get(
+    "/operations/{operation_id}/pieces",
+    tags=["Operations"],
+    summary="Return sum of good + bad pieces for an operation",
+)
+def get_total_pieces(operation_id: int, db: Session = Depends(get_db)):
+    # ensure operation exists
+    op = db.query(OperationDB).filter(OperationDB.id == operation_id).first()
+    if not op:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Operation not found")
+
+    # Use SQLAlchemy func and coalesce to safely sum nullable columns
+    # Returns a single row with two fields (good_sum, bad_sum)
+    row = (
+        db.query(
+            func.coalesce(func.sum(TaskDB.good_pieces), 0).label("good_sum"),
+            func.coalesce(func.sum(TaskDB.bad_pieces), 0).label("bad_sum"),
+        )
+        .filter(TaskDB.operation_id == operation_id)
+        .one()
+    )
+
+    good = int(row.good_sum or 0)
+    bad = int(row.bad_sum or 0)
+    total = good + bad
+
+    return {"good_pieces": good, "bad_pieces": bad, "total_pieces": total}
 
 
 # -----------------------
