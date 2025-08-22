@@ -5,12 +5,20 @@ import { ArrowLeft } from "react-bootstrap-icons";
 import { type Task, processTypeLabels } from "../utils/Types";
 import EditTask from "../components/EditTask";
 
-/** --- Helpers --- **/
-const formatLocalTime = (d: Date) => {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+// Helper to format a local time string from ISO
+const formatLocalTime = (iso?: string | null) => {
+  if (!iso) return "--:--:--";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "--:--:--";
+  return d.toLocaleTimeString();
+};
+
+// Compute duration in seconds between start_at and end_at (or now if ongoing)
+const computeDurationSeconds = (task: Task) => {
+  if (!task.start_at) return 0;
+  const start = new Date(task.start_at).getTime();
+  const end = task.end_at ? new Date(task.end_at).getTime() : Date.now();
+  return Math.max(0, Math.floor((end - start) / 1000));
 };
 
 const formatDuration = (seconds: number) => {
@@ -20,39 +28,25 @@ const formatDuration = (seconds: number) => {
   return [hh, mm, ss].map((v) => String(v).padStart(2, "0")).join(":");
 };
 
-const parseTimeToSeconds = (timeStr?: string | null): number => {
-  if (!timeStr) return 0;
-  const main = String(timeStr).split(".")[0];
-  const parts = main.split(":").map((p) => Number(p));
-  if (parts.length < 3) return 0;
-  const [hh, mm, ss] = parts;
-  if ([hh, mm, ss].some((n) => Number.isNaN(n))) return 0;
-  return hh * 3600 + mm * 60 + ss;
-};
-
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<Task | null>(null);
-
   const [goodPiecesInput, setGoodPiecesInput] = useState<number | "">("");
   const [badPiecesInput, setBadPiecesInput] = useState<number | "">("");
-
-  // timer state
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // edit modal
   const [showEdit, setShowEdit] = useState(false);
   const [editFieldKey, setEditFieldKey] = useState<string>("");
   const [editLabel, setEditLabel] = useState<string>("");
   const [editInitial, setEditInitial] = useState<any>(null);
 
-  const API_URL = import.meta.env.VITE_FASTAPI_URL;
-
+  // Fetch task
   useEffect(() => {
     if (!taskId) {
       setError("Task ID inválido");
@@ -60,38 +54,19 @@ export default function TaskDetail() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
     const fetchTask = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const res = await fetch(`${API_URL}/task/${taskId}`);
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Erro ao buscar tarefa: ${res.status} ${text}`);
-        }
-        const data = await res.json();
+        if (!res.ok) throw new Error(`Erro ao buscar tarefa: ${res.status}`);
+        const data: Task = await res.json();
         setTask(data);
         setGoodPiecesInput(data.good_pieces ?? "");
         setBadPiecesInput(data.bad_pieces ?? "");
-
-        // initialize timerSeconds
-        if (data.start_time) {
-          const startSec = parseTimeToSeconds(data.start_time);
-          if (data.end_time) {
-            const endSec = parseTimeToSeconds(data.end_time);
-            setTimerSeconds(Math.max(0, endSec - startSec));
-          } else {
-            const now = new Date();
-            const nowSec =
-              now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-            setTimerSeconds(Math.max(0, nowSec - startSec));
-          }
-        } else {
-          setTimerSeconds(0);
-        }
+        setTimerSeconds(computeDurationSeconds(data));
       } catch (err: any) {
-        setError(err.message || "Erro inesperado ao buscar tarefa");
+        setError(err.message || "Erro inesperado");
       } finally {
         setLoading(false);
       }
@@ -106,29 +81,25 @@ export default function TaskDetail() {
     };
   }, [taskId, API_URL]);
 
-  // Manage timer interval: when task.start_time exists and end_time is null => run timer
+  // Timer interval
   useEffect(() => {
     if (timerRef.current) {
-      window.clearInterval(timerRef.current);
+      clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    if (task?.start_time && !task?.end_time) {
-      timerRef.current = window.setInterval(() => {
+    if (task?.start_at && !task?.end_at) {
+      timerRef.current = setInterval(() => {
         setTimerSeconds((prev) => prev + 1);
       }, 1000);
     }
 
     return () => {
-      if (timerRef.current) {
-        window.clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [task?.start_time, task?.end_time]);
+  }, [task?.start_at, task?.end_at]);
 
-  // unified update wrapper: uses your current API (PUT /tasks/{id})
-  const updateTaskOnServer = async (payload: Record<string, any>) => {
+  const updateTaskOnServer = async (payload: Partial<Task>) => {
     if (!task) throw new Error("Tarefa não carregada");
     const res = await fetch(`${API_URL}/tasks/${task.id}`, {
       method: "PUT",
@@ -139,71 +110,50 @@ export default function TaskDetail() {
       const text = await res.text();
       throw new Error(`(${res.status}) ${text}`);
     }
-    const data = await res.json();
-    return data as Task;
+    return (await res.json()) as Task;
   };
 
   const handleStartStop = async () => {
     if (!task) return;
     setError(null);
-
-    if (!task.start_time) {
-      // start
-      const now = formatLocalTime(new Date());
-      try {
-        setLoading(true);
-        const updated = await updateTaskOnServer({ start_time: now });
-        setTask(updated);
-        setTimerSeconds(0);
-      } catch (err: any) {
-        setError(err.message || "Erro ao iniciar a tarefa");
-      } finally {
-        setLoading(false);
-      }
-    } else if (!task.end_time) {
-      // stop
-      const now = formatLocalTime(new Date());
-      try {
-        setLoading(true);
-        const updated = await updateTaskOnServer({ end_time: now });
-        setTask(updated);
-
-        const startSec = parseTimeToSeconds(updated.start_time);
-        const endSec = parseTimeToSeconds(updated.end_time);
-        setTimerSeconds(Math.max(0, endSec - startSec));
-      } catch (err: any) {
-        setError(err.message || "Erro ao parar a tarefa");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleSavePieces = async () => {
-    if (!task) return;
-    setError(null);
-
-    const goodVal = typeof goodPiecesInput === "number" ? goodPiecesInput : null;
-    const badVal = typeof badPiecesInput === "number" ? badPiecesInput : null;
+    const nowIso = new Date().toISOString();
 
     try {
       setLoading(true);
-      // PUT /tasks/{id} expects TaskUpdate shape; send only changed fields
-      const updated = await updateTaskOnServer({
-        good_pieces: goodVal,
-        bad_pieces: badVal,
-      });
+      let updated: Task;
+      if (!task.start_at) {
+        updated = await updateTaskOnServer({ start_at: nowIso });
+        setTimerSeconds(0);
+      } else if (!task.end_at) {
+        updated = await updateTaskOnServer({ end_at: nowIso });
+        setTimerSeconds(computeDurationSeconds(updated));
+      } else return;
       setTask(updated);
-      setGoodPiecesInput(updated.good_pieces ?? "");
-      setBadPiecesInput(updated.bad_pieces ?? "");
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar as peças");
+      setError(err.message || "Erro ao atualizar tarefa");
     } finally {
       setLoading(false);
     }
   };
 
-  // open edit modal for a single field
+  const handleSavePieces = async () => {
+    if (!task) return;
+    try {
+      setLoading(true);
+      const updated = await updateTaskOnServer({
+        good_pieces: typeof goodPiecesInput === "number" ? goodPiecesInput : null,
+        bad_pieces: typeof badPiecesInput === "number" ? badPiecesInput : null,
+      });
+      setTask(updated);
+      setGoodPiecesInput(updated.good_pieces ?? "");
+      setBadPiecesInput(updated.bad_pieces ?? "");
+    } catch (err: any) {
+      setError(err.message || "Erro ao salvar peças");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openEditModal = (fieldKey: string, label: string, initial: any) => {
     setEditFieldKey(fieldKey);
     setEditLabel(label);
@@ -211,12 +161,11 @@ export default function TaskDetail() {
     setShowEdit(true);
   };
 
-  // handler after EditTask returns updated task
   const handleTaskSaved = (updated: Task) => {
     setTask(updated);
-    // keep inputs consistent
     setGoodPiecesInput(updated.good_pieces ?? "");
     setBadPiecesInput(updated.bad_pieces ?? "");
+    setTimerSeconds(computeDurationSeconds(updated));
   };
 
   if (loading)
@@ -227,18 +176,17 @@ export default function TaskDetail() {
     );
 
   if (error) return <Alert variant="danger">{error}</Alert>;
-
   if (!task) return <Alert variant="danger">Tarefa não encontrada</Alert>;
 
   const processedLabel = processTypeLabels[task.process_type] ?? task.process_type ?? "-";
-  const piecesEditable = Boolean(task.start_time && task.end_time);
+  const piecesEditable = Boolean(task.start_at && task.end_at);
 
   let btnVariant: "success" | "danger" | "primary" = "success";
   let btnLabel = "Iniciar";
-  if (!task.start_time) {
+  if (!task.start_at) {
     btnVariant = "success";
     btnLabel = "Iniciar";
-  } else if (task.start_time && !task.end_time) {
+  } else if (task.start_at && !task.end_at) {
     btnVariant = "danger";
     btnLabel = "Parar";
   } else {
@@ -252,17 +200,19 @@ export default function TaskDetail() {
         <ArrowLeft className="me-2" /> Voltar
       </Button>
 
-      {/* Task Info — click individual card to edit that single field */}
       <Row className="mb-4 text-center justify-content-center gx-3">
         {[
-          { key: "date", label: "Data", value: task.date },
           { key: "process_type", label: "Tipo de Processo", value: processedLabel },
-          { key: "start_time", label: "Início", value: task.start_time ?? "--:--:--" },
-          { key: "end_time", label: "Fim", value: task.end_time ?? "--:--:--" },
+          { key: "start_at", label: "Início", value: formatLocalTime(task.start_at) },
+          { key: "end_at", label: "Fim", value: formatLocalTime(task.end_at) },
           { key: "operator", label: "Operador", value: task.operator ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
-            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(String(key), label, value === "--:--:--" ? "" : value)}>
+            <Card
+              className="p-3"
+              style={{ cursor: "pointer" }}
+              onClick={() => openEditModal(key, label, value === "--:--:--" ? "" : value)}
+            >
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value}</Card.Text>
             </Card>
@@ -278,25 +228,16 @@ export default function TaskDetail() {
         fieldKey={editFieldKey}
         label={editLabel}
         initialValue={editInitial}
-        onSaved={(updatedTask) => {
-          handleTaskSaved(updatedTask);
-          setShowEdit(false);
-        }}
+        onSaved={handleTaskSaved}
       />
 
-      {/* Start/Stop Button */}
       <div className="text-center mb-4">
         <Button
           variant={btnVariant}
           size="lg"
-          style={{
-            width: "400px",
-            height: "120px",
-            fontSize: "2rem",
-            fontWeight: "bold",
-          }}
+          style={{ width: "400px", height: "120px", fontSize: "2rem", fontWeight: "bold" }}
           onClick={handleStartStop}
-          disabled={Boolean(loading) || (Boolean(task.start_time) && Boolean(task.end_time))}
+          disabled={loading || (Boolean(task.start_at) && Boolean(task.end_at))}
         >
           {btnLabel}
           <br />
@@ -304,7 +245,6 @@ export default function TaskDetail() {
         </Button>
       </div>
 
-      {/* Pieces Inputs — very small centered row */}
       <div className="position-fixed start-0 end-0 p-3 shadow" style={{ bottom: "10px", zIndex: 1030 }}>
         <Form onSubmit={(e) => { e.preventDefault(); handleSavePieces(); }}>
           <Row className="justify-content-center align-items-end">

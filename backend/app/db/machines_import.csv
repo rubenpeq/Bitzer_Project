@@ -1,0 +1,87 @@
+row_index,machine_location,machine_description,machine_id_colN,detected_type_lines,machine_type
+3,11100,Serra de Corte (PM),10000995,Máquina;Máquina;Máquina,CNC
+5,12705,DAEWOO PUMA  - TORNO(S) CNC,10000405,Máquina;Máquina;Máquina,CNC
+7,13102,BLUTHARDT - FURADEIRA(S) ENG. COLUNA,10000406,Máquina;Máquina;Máquina,CNC
+9,13103,FLOTT - FURADEIRA ENG. COLUNA,10000407,Máquina;Máquina;Máquina,CNC
+11,13201,DONAU - FURADEIRAS RÁPIDAS,10000410,Máquina;Máquina;Máquina,CNC
+13,13401,BAMMESBERGER - MECANIZAÇÃO BIELAS,10000411,Máquina;Máquina;Máquina,CNC
+15,13501,BURKHARDT & WEBER - FUROS E ROSCAS MULT.,10000412,Máquina;Máquina;Máquina,CNC
+17,13504,*GARDNER-FURAR INDICE CAB.CIL. (desativ),10000414,Máquina;Máquina;Máquina,CNC
+19,13505,BURKHARDT & WEBER - FUROS E  ROSCAS MULT,10000415,Máquina;Máquina;Máquina,CNC
+21,13800,FRESA CNC HELLER PFH 10-1000 H+V,10000699,Máquina;Máquina;Máquina,CNC
+23,13818,CENTRO DE PROCESS. MAKINO A77E,10000418,Máquina;Máquina;Máquina,CNC
+25,13828,CENTRO(S) DE PROCESS. DAEWOO HM-500,10000419,Máquina;Máquina;Máquina,CNC
+27,14201,HELLER - FRESA VERTICAL,10000420,Máquina;Máquina;Máquina,CNC
+29,14202,HELLER - FRESA PARALELA COMPRIDA,10000421,Máquina;Máquina;Máquina,CNC
+31,14203,FRITZ WERNER - FRESA PARALELA COMPRIDA,10000422,Máquina;Máquina;Máquina,CNC
+33,14401,BAMMESBERGER-TORNO C/ 2 FUSOS,10000423,Máquina;Máquina;Máquina,CNC
+35,15201,GÖCKEL G80 - RECTIFICADORA PLANA,10000426,Máquina;Máquina;Máquina,CNC
+37,15203,GÖCKEL GB65 - RECTIFICADORA PLANA,10000427,Máquina;Máquina;Máquina,CNC
+39,16201,NAGEL VS 10-60 - BRUNIMENTO VERTICAL,10000428,Máquina;Máquina;Máquina,CNC
+41,16203,NAGEL VS 8-50 - BRUNIMENTO VERTICAL,10000429,Máquina;Máquina;Máquina,CNC
+43,16620,NAGEL HHM-70 - BRUNIMENTO HORIZONTAL MAN,10000431,Máquina;Máquina;Máquina,CNC
+45,23202,BLITZ - PRENSA HIDRÁULICA,10000432,Máquina;Máquina;Máquina,CNC
+47,23203,PRENSA RV PE301VM OPC,10001139,Máquina;Máquina;Máquina,CNC
+49,26100,Máquina de marcação “Markator”,10001154,Máquina;Máquina;Mão-de-obra,CONVENTIONAL
+51,26110,Braço de Roscar Elétrico,10001182,Máquina;Mão-de-obra;Máquina,CONVENTIONAL
+53,34030,SOLDAR A MÃO,10000433,Mão-de-obra;Máquina;Mão-de-obra,CONVENTIONAL
+55,41205,MTM III 1100 - MÁQUINA DE LAVAGEM,10000436,Máquina;Mão-de-obra;Máquina;Mão-de-obra,CONVENTIONAL
+58,42500,Máquina de Decapar,10001170,Máquina;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+61,65000,REBARBAR PEÇAS EM FERRO FUNDIDO,10000448,Mão-de-obra;Máquina;Máquina,CONVENTIONAL
+63,71622,SALA DE POLIMENTO,10000456,Máquina;Máquina;Máquina,CNC
+65,42505,Instalação Pintura,10001220,Máquina;Máquina;Máquina,CNC
+67,43501,CEFLAR/ WAGNER - Instalação de pintura,10000437,Máquina;Máquina;Máquina,CNC
+69,51060,ABRIGO PNEUMÁTICO DE ESTANQUEIDADE,10000439,Máquina;Máquina;Máquina,CNC
+71,54025,TINA DE AGUA P/ ENSAIO DE ESTANQUEIDADE,10000441,Máquina;Máquina;Máquina,CNC
+73,55620,ENSAIO FINAL COMPRESSORES ABERTOS 0-VII,10000442,Máquina;Máquina;Máquina,CNC
+75,56620,*INSTALAÇÃO SECAGEM AB (desativ.),10000445,Máquina;Máquina;Máquina,CNC
+77,56625,INSTALAÇÃO DE SECAGEM AB,10000446,Máquina;Máquina;Mão-de-obra,CONVENTIONAL
+79,59601,ENCHIMENTO DE COMPRESSORES COM ÓLEO,10000447,Máquina;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+81,65001,ESCOVAR E REBARBAR,10000449,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+83,65002,Limpeza de roscas,10001251,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+85,71020,PRÉ-MONTAGEM PLACAS DE VÁLVULAS,10000450,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+87,71021,PRÉ-MONTAGEM (LUGAR NEUTRO),10000451,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+89,71022,Pré-Montagem Produtos de Chapa,10001135,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+91,71620,PRÉ-MONTAGEM PISTÃO/ BIELA,10000455,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+93,72060,MONTAGEM GRUPOS DE CONDENSAÇÃO,10000457,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+95,72070,TRABALHOS FINAIS: MGC,10000510,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+97,73620,LINHA DE MONTAGEM ABERTOS,10000459,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+99,75020,TRABALHOS FINAIS: COMPRESSORES,10000461,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+101,81007,EMBALAGEM MANUAL PEÇAS CKD,10000528,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+103,81020,EMBALAGEM MANUAL- MCO,10000462,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+105,81025,EMBALAGEM (PEÇAS SOBRESSALENTES),10000463,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+107,81030,EMBALAGEM MANUAL - MGC,10000516,Mão-de-obra;Mão-de-obra;Máquina,CONVENTIONAL
+109,LINHA-AB,Linha de montagem compr. abertos,10000342,Mão-de-obra;Máquina;Máquina,CONVENTIONAL
+111,11110,Serra de Corte (OPC),10000998,Máquina;Máquina;Máquina,CNC
+113,13400,Escareadora ESMATEC,10000996,Máquina;Máquina;Máquina,CNC
+115,13702,CENTROS PROCESSAMENTO VERTICAL,10000416,Máquina;Máquina;Máquina,CNC
+117,23500,Quinagem,10000829,Máquina;Máquina;Máquina,CNC
+119,27800,*Punçunadora FPL Evolution TT 15-30(des),10000830,Máquina;Máquina;Máquina,CNC
+121,27801,Máquina de corte a laser,10001150,Máquina;Máquina;Máquina,CNC
+123,27802,Máquina Polimento e Remoção de rebarba,10001183,Máquina;Máquina;Máquina,CNC
+125,35030,Soldadura Semi-Auto (MGC),10000434,Máquina;Máquina;Máquina,CNC
+127,35100,Soldadura por Ponto,10000831,Máquina;Máquina;Máquina,CNC
+129,35101,Soldadura Semi-Auto (OPC),10000923,Máquina;Máquina;Máquina,CNC
+131,35102,Operação de lixa,10000924,Máquina;Máquina;Máquina,CNC
+133,35103,Soldadura Short Cycle,10000997,Máquina;Máquina;Máquina,CNC
+135,35105,Soldadura com robot,10001249,Máquina;Máquina;Mão-de-obra,CONVENTIONAL
+137,43510,Pintura a pó,10000999,Máquina;Mão-de-obra;Máquina,CONVENTIONAL
+139,65003,Trabalhos adicionais OPC,10001252,Mão-de-obra;Máquina;Mão-de-obra,CONVENTIONAL
+141,92110,Serra de fita MACC,10000922,Máquina;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+143,CAP-MGC,Montagem Grupos Condensação,10000503,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+145,MA_OMI_G,Manutenção OMI // Geral,10000718,Mão-de-obra;Mão-de-obra;Mão-de-obra,CONVENTIONAL
+147,MA_PM_OP,Manutenção PM // Operador/a,10000717,Mão-de-obra;Mão-de-obra,CONVENTIONAL
+149,MA_PM_RE,Manutenção PM // Responsável,10000719,Mão-de-obra,CONVENTIONAL
+151,PM2000,Gestão de EMM,,,
+152,QM2000,Inspecção e recepção de matérias-primas,,,
+153,LT-EMBAB,Preparar material p/ PVB-EMB-AB,,,
+154,LT-EMBMG,Preparar material p/ PVB-EMB-MGC,,,
+155,LT-MCOAB,Preparar material p/ PVB-MCO-AB,,,
+156,LT-MCOPE,Preparar material p/ PVB-MCO-PE,,,
+157,LT-MGC,Preparar material p/ PVB-MGC,,,
+158,LT-OPC,Preparar material p/ PVB-OPC,,,
+159,LT-PM,Preparar material p/ PVB-PM,,,
+160,LT-PREMO,Preparar material p/ PVB-PREMON,,,
+161,LT-TRFNR,* Preparar material PVB-TRF (desativ.),,,
+162,LT-TSU-M,Preparar material p/ PVB-TSU-MTM,,,
+163,LT-TSU-P,Preparar material p/ PVB-TSU-PIN,,,

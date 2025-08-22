@@ -1,15 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Modal,
-  Button,
-  Form,
-  Row,
-  Col,
-  Alert,
-  Spinner,
-  InputGroup,
-} from "react-bootstrap";
-import { type Operation, type Machine, processTypeLabels } from "../utils/Types";
+import { Modal, Button, Form, Row, Col, Alert, Spinner, InputGroup } from "react-bootstrap";
+import { type Operation, type Machine } from "../utils/Types";
 
 type CreateNewOperationProps = {
   orderId?: number;
@@ -27,7 +18,7 @@ export default function CreateNewOperation({
   onCreateSuccess,
 }: CreateNewOperationProps) {
   const [operation_code, setOperationCode] = useState<string>("");
-  const [selectedMachineIdStr, setSelectedMachineIdStr] = useState<string>("");
+  const [selectedMachineIdStr, setSelectedMachineIdStr] = useState<string>(""); // "" = no selection, "NONE" = explicit none, otherwise numeric id string
   const [machines, setMachines] = useState<Machine[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,7 +33,7 @@ export default function CreateNewOperation({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // ensure empty on open
+  // ensure empty on open and fetch machines
   useEffect(() => {
     if (!show) return;
     setSelectedMachineIdStr("");
@@ -98,8 +89,9 @@ export default function CreateNewOperation({
       return;
     }
 
-    if (!selectedMachineIdStr.trim()) {
-      setError("Selecionar uma máquina é obrigatório.");
+    // selection is required but "NONE" is accepted (means explicit none)
+    if (selectedMachineIdStr === "") {
+      setError("Selecionar uma máquina é obrigatório (ou escolha 'Nenhuma').");
       return;
     }
 
@@ -110,8 +102,13 @@ export default function CreateNewOperation({
       const payload: any = {
         order_id: Number(resolvedId),
         operation_code: String(operation_code).trim(),
-        machine_id: Number(selectedMachineIdStr), // required now
       };
+
+      if (selectedMachineIdStr === "NONE") {
+        payload.machine_id = null;
+      } else {
+        payload.machine_id = Number(selectedMachineIdStr);
+      }
 
       const res = await fetch(`${API_URL}/operations`, {
         method: "POST",
@@ -147,30 +144,32 @@ export default function CreateNewOperation({
     onClose();
   };
 
-  // label helper
+  // label: only machine_location and description
   const labelFor = (m: Machine) => {
     const loc = (m.machine_location ?? "").toString();
     const desc = (m.description ?? "").toString();
-    const mtype = (m.machine_type ?? "").toString();
-    return `${loc} — ${desc} (${processTypeLabels[mtype]})`;
+    return `${loc} — ${desc}`;
   };
 
-  // sync visible input when selection changes
+  // sync visible input when selection changes (only by id or NONE)
   useEffect(() => {
-    if (!selectedMachineIdStr) {
+    if (selectedMachineIdStr === "" ) {
       setSearchText("");
       setHighlightIndex(-1);
       return;
     }
-    const sel =
-      machines.find((m) => String(m.id) === String(selectedMachineIdStr)) ||
-      machines.find((m) => String(m.machine_id) === String(selectedMachineIdStr));
+    if (selectedMachineIdStr === "NONE") {
+      setSearchText("Nenhuma");
+      setHighlightIndex(-1);
+      return;
+    }
+    const sel = machines.find((m) => String(m.id) === String(selectedMachineIdStr));
     if (sel) setSearchText(labelFor(sel));
     else setSearchText("");
     setHighlightIndex(-1);
   }, [selectedMachineIdStr, machines]);
 
-  // user typing clears prior selection (so selection can't persist while editing)
+  // when user types, clear previous selection (force picking from list)
   const onInputChange = (value: string) => {
     setSearchText(value);
     if (selectedMachineIdStr) setSelectedMachineIdStr("");
@@ -178,63 +177,20 @@ export default function CreateNewOperation({
     setHighlightIndex(0);
   };
 
-  // filtered list
+  // filtered by only machine_location and description
   const filteredMachines = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return machines;
     return machines.filter((m) => {
-      const parts = [
-        String(m.machine_location ?? ""),
-        String(m.description ?? ""),
-        String(m.machine_id ?? ""),
-        String(m.machine_type ?? ""),
-      ];
-      return parts.some((p) => p.toLowerCase().includes(q));
+      const loc = String(m.machine_location ?? "").toLowerCase();
+      const desc = String(m.description ?? "").toLowerCase();
+      return loc.includes(q) || desc.includes(q);
     });
   }, [machines, searchText]);
 
-  // helper: find exact match label
-  const findExactLabelMatch = (): Machine | undefined => {
-    const txt = searchText.trim();
-    if (!txt) return undefined;
-    return machines.find((m) => labelFor(m).trim() === txt);
-  };
+  // keyboard navigation & selection including the "Nenhuma" top item
+  const totalListCount = filteredMachines.length + 1; // +1 for "Nenhuma"
 
-  // click outside handler: close and enforce only exact-match selection remains
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setOpen(false);
-        const sel =
-          machines.find((m) => String(m.id) === String(selectedMachineIdStr)) ||
-          machines.find((m) => String(m.machine_id) === String(selectedMachineIdStr));
-        if (!sel) {
-          // no explicit selection: allow exact-match auto-select, otherwise clear visible text
-          const exact = findExactLabelMatch();
-          if (exact) {
-            setSelectedMachineIdStr(String(exact.id ?? exact.machine_id ?? ""));
-            setSearchText(labelFor(exact));
-          } else {
-            setSearchText("");
-            setSelectedMachineIdStr("");
-          }
-        } else {
-          // there is a selection; ensure input equals label, otherwise clear selection
-          if (searchText.trim() !== labelFor(sel).trim()) {
-            setSelectedMachineIdStr("");
-            setSearchText("");
-          } else {
-            setSearchText(labelFor(sel));
-          }
-        }
-        setHighlightIndex(-1);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [wrapperRef, selectedMachineIdStr, machines, searchText]);
-
-  // keyboard navigation & selection
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       setOpen(true);
@@ -245,52 +201,92 @@ export default function CreateNewOperation({
     if (!open) return;
 
     if (e.key === "ArrowDown") {
-      setHighlightIndex((i) => Math.min((filteredMachines.length - 1) as number, Math.max(0, i + 1)));
+      setHighlightIndex((i) => Math.min(totalListCount - 1, Math.max(0, i + 1)));
       e.preventDefault();
     } else if (e.key === "ArrowUp") {
       setHighlightIndex((i) => Math.max(0, i - 1));
       e.preventDefault();
     } else if (e.key === "Enter") {
-      // only select on Enter if there is a highlighted item
-      if (highlightIndex >= 0 && highlightIndex < filteredMachines.length) {
-        const chosen = filteredMachines[highlightIndex];
-        const chosenId = String(chosen.id ?? chosen.machine_id ?? "");
-        setSelectedMachineIdStr(chosenId);
+      if (highlightIndex >= 0 && highlightIndex < totalListCount) {
+        if (highlightIndex === 0) {
+          // Nenhuma selected
+          setSelectedMachineIdStr("NONE");
+          setSearchText("Nenhuma");
+        } else {
+          const chosen = filteredMachines[highlightIndex - 1];
+          setSelectedMachineIdStr(String(chosen.id));
+          setSearchText(labelFor(chosen));
+        }
         setOpen(false);
-        setSearchText(labelFor(chosen));
       }
       e.preventDefault();
     } else if (e.key === "Escape") {
       setOpen(false);
-      const sel =
-        machines.find((m) => String(m.id) === String(selectedMachineIdStr)) ||
-        machines.find((m) => String(m.machine_id) === String(selectedMachineIdStr));
-      if (sel) setSearchText(labelFor(sel));
-      else setSearchText("");
+      // restore selection label or clear
+      if (selectedMachineIdStr === "NONE") setSearchText("Nenhuma");
+      else {
+        const sel = machines.find((m) => String(m.id) === String(selectedMachineIdStr));
+        if (sel) setSearchText(labelFor(sel));
+        else setSearchText("");
+      }
       setHighlightIndex(-1);
     }
   };
 
+  const onSelectNone = () => {
+    setSelectedMachineIdStr("NONE");
+    setSearchText("Nenhuma");
+    setOpen(false);
+    setHighlightIndex(-1);
+  };
+
   const onSelectMachine = (m: Machine) => {
-    const id = String(m.id ?? m.machine_id ?? "");
-    setSelectedMachineIdStr(id);
+    setSelectedMachineIdStr(String(m.id));
     setSearchText(labelFor(m));
     setOpen(false);
     setHighlightIndex(-1);
   };
 
-  const toggleOpen = () => {
-    setOpen((v) => {
-      const next = !v;
-      if (next) setTimeout(() => inputRef.current?.focus(), 0);
-      return next;
-    });
-  };
+  // click outside handler: close and enforce exact-match selection (otherwise clear)
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        const sel = machines.find((m) => String(m.id) === String(selectedMachineIdStr));
+        if (!sel && selectedMachineIdStr !== "NONE") {
+          // allow exact-match auto-select, otherwise clear visible text
+          const exact = machines.find((mm) => labelFor(mm).trim() === searchText.trim());
+          if (exact) {
+            setSelectedMachineIdStr(String(exact.id));
+            setSearchText(labelFor(exact));
+          } else {
+            setSearchText("");
+            setSelectedMachineIdStr("");
+          }
+        } else {
+          // if selection is NONE, keep "Nenhuma" label; if selection is a machine, ensure label matches
+          if (selectedMachineIdStr === "NONE") {
+            setSearchText("Nenhuma");
+          } else if (sel) {
+            if (searchText.trim() !== labelFor(sel).trim()) {
+              setSelectedMachineIdStr("");
+              setSearchText("");
+            } else {
+              setSearchText(labelFor(sel));
+            }
+          }
+        }
+        setHighlightIndex(-1);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [wrapperRef, selectedMachineIdStr, machines, searchText]);
 
   // validation states
-  const machineInvalid = submitAttempted && !selectedMachineIdStr;
+  const machineInvalid = submitAttempted && selectedMachineIdStr === "";
   const codeInvalid = submitAttempted && !operation_code.trim();
-  const createDisabled = loading || !operation_code.trim() || !selectedMachineIdStr;
+  const createDisabled = loading || !operation_code.trim() || selectedMachineIdStr === "";
 
   return (
     <Modal show={show} onHide={handleClose} centered>
@@ -310,9 +306,7 @@ export default function CreateNewOperation({
               <Form.Control
                 type="text"
                 value={operation_code}
-                onChange={(e) => {
-                  setOperationCode(e.target.value);
-                }}
+                onChange={(e) => setOperationCode(e.target.value)}
                 isInvalid={codeInvalid}
                 disabled={loading}
               />
@@ -331,7 +325,7 @@ export default function CreateNewOperation({
                     <input
                       ref={inputRef}
                       className={`form-control ${machineInvalid ? "is-invalid" : ""}`}
-                      placeholder="Pesquisar ou selecione..."
+                      placeholder="Pesquisar por localização ou descrição..."
                       value={searchText}
                       onChange={(e) => onInputChange(e.target.value)}
                       onFocus={() => {
@@ -346,13 +340,15 @@ export default function CreateNewOperation({
                     <Button
                       variant="outline-secondary"
                       onClick={() => {
-                        toggleOpen();
+                        setOpen(v => !v);
                         if (!open && selectedMachineIdStr) {
-                          const sel =
-                            machines.find((m) => String(m.id) === String(selectedMachineIdStr)) ||
-                            machines.find((m) => String(m.machine_id) === String(selectedMachineIdStr));
-                          if (sel) setSearchText(labelFor(sel));
+                          if (selectedMachineIdStr === "NONE") setSearchText("Nenhuma");
+                          else {
+                            const sel = machines.find((m) => String(m.id) === String(selectedMachineIdStr));
+                            if (sel) setSearchText(labelFor(sel));
+                          }
                         }
+                        setHighlightIndex(0);
                       }}
                       aria-label={open ? "Fechar opções" : "Abrir opções"}
                     >
@@ -363,41 +359,52 @@ export default function CreateNewOperation({
                   {machineInvalid && <div className="invalid-feedback d-block">É obrigatório selecionar uma máquina.</div>}
 
                   {open && (
-                    <ul
-                      role="listbox"
-                      className="list-group position-absolute w-100"
-                      style={{ zIndex: 1000, maxHeight: 240, overflowY: "auto" }}
-                    >
+                    <ul role="listbox" className="list-group position-absolute w-100" style={{ zIndex: 1000, maxHeight: 240, overflowY: "auto" }}>
+                      {/* First item: Nenhuma */}
+                      <li
+                        key="none"
+                        role="option"
+                        aria-selected={selectedMachineIdStr === "NONE"}
+                        className={"list-group-item list-group-item-action" + (highlightIndex === 0 ? " active" : "")}
+                        onMouseEnter={() => setHighlightIndex(0)}
+                        onMouseDown={(ev) => {
+                          ev.preventDefault();
+                          onSelectNone();
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Nenhuma</div>
+                      </li>
+
                       {filteredMachines.length === 0 ? (
-                        <li className="list-group-item text-muted">Nenhuma máquina corresponde à pesquisa.</li>
+                        null
                       ) : (
                         filteredMachines.map((m, idx) => {
                           const label = labelFor(m);
-                          const key = String(m.id ?? m.machine_id ?? idx);
-                          const isHighlighted = idx === highlightIndex;
-                          const isSelected = String(m.id ?? m.machine_id ?? "") === selectedMachineIdStr;
+                          const listIndex = idx + 1; // offset by 1 because "Nenhuma" is first
+                          const key = String(m.id ?? idx);
+                          const isHighlighted = listIndex === highlightIndex;
+                          const isSelected = String(m.id) === selectedMachineIdStr;
                           return (
                             <li
                               key={key}
                               role="option"
                               aria-selected={isSelected}
-                              className={
-                                "list-group-item list-group-item-action d-flex justify-content-between align-items-start" +
-                                (isHighlighted ? " active" : "")
-                              }
-                              onMouseEnter={() => setHighlightIndex(idx)}
+                              className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
+                              onMouseEnter={() => setHighlightIndex(listIndex)}
                               onMouseDown={(ev) => {
                                 ev.preventDefault();
                                 onSelectMachine(m);
                               }}
                               style={{ cursor: "pointer" }}
                             >
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {label}
-                              </div>
+                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
                             </li>
                           );
                         })
+                      )}
+                      {filteredMachines.length === 0 && (
+                        <li className="list-group-item text-muted">Nenhuma máquina corresponde à pesquisa.</li>
                       )}
                     </ul>
                   )}
@@ -405,20 +412,6 @@ export default function CreateNewOperation({
               ) : (
                 <Form.Text className="text-muted">Nenhuma máquina disponível. Crie máquinas no sistema antes de criar operações.</Form.Text>
               )}
-
-              {/* hidden select for compatibility */}
-              <select
-                value={selectedMachineIdStr}
-                onChange={(e) => setSelectedMachineIdStr(e.target.value)}
-                style={{ display: "none" }}
-              >
-                <option value="">Selecione a máquina</option>
-                {machines.map((m) => (
-                  <option key={String(m.id ?? m.machine_id ?? "")} value={String(m.id ?? m.machine_id ?? "")}>
-                    {labelFor(m)}
-                  </option>
-                ))}
-              </select>
             </Col>
           </Form.Group>
         </Form>

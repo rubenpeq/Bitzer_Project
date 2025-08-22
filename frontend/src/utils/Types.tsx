@@ -15,6 +15,7 @@ export type Machine = {
   description: string;
   machine_id: string;
   machine_type: MachineType;
+  active?: boolean; // NEW: optional flag to filter selectable machines
 };
 
 // -------------------------------
@@ -23,7 +24,7 @@ export type Machine = {
 export type Operation = {
   id: number;
   operation_code: string;
-  order_id: number;          // now references order by ID
+  order_id: number;           // now references order by ID
   machine_id?: number | null; // references machine by ID (nullable)
   machine?: Machine;          // optional expanded machine details
   tasks?: Task[];             // operations include tasks
@@ -38,7 +39,6 @@ export type OperationUpdate = {
   machine_type?: MachineType | null;
 };
 
-
 // -------------------------------
 // Task type
 // -------------------------------
@@ -47,9 +47,11 @@ export type Task = {
   operation_id: number;
   operator: string;
   process_type: ProcessType;
-  date: string; // YYYY-MM-DD
-  start_time?: string | null; // HH:MM:SS or null
-  end_time?: string | null;   // HH:MM:SS or null
+  // NEW: timezone-aware datetime strings (ISO8601 with offset)
+  start_at?: string | null; // e.g. "2025-08-22T08:30:00+01:00"
+  end_at?: string | null;
+  num_benches?: number | null;
+  num_machines?: number | null;
   good_pieces?: number | null;
   bad_pieces?: number | null;
 };
@@ -58,9 +60,10 @@ export type Task = {
 export type TaskCreate = {
   process_type: ProcessType;
   operator: string;
-  date?: string; // optional, defaults to today in the UI
-  start_time?: string;
-  end_time?: string;
+  start_at?: string;
+  end_at?: string;
+  num_benches?: number;
+  num_machines?: number;
   good_pieces?: number;
   bad_pieces?: number;
 };

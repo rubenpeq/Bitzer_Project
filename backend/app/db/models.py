@@ -1,5 +1,12 @@
 from sqlalchemy import (
-    Column, Integer, String, Date, Time, ForeignKey, Enum
+    Column,
+    Integer,
+    String,
+    Date,
+    DateTime,
+    ForeignKey,
+    Enum,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -25,8 +32,10 @@ class OrderDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_number = Column(Integer, unique=True, nullable=False)
     material_number = Column(Integer, nullable=False)
+    
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+
     num_pieces = Column(Integer, nullable=False)
 
     operations = relationship("OperationDB", back_populates="order")
@@ -40,6 +49,8 @@ class MachineDB(Base):
     description = Column(String, nullable=False)
     machine_id = Column(String, nullable=False)
     machine_type = Column(Enum(MachineType), nullable=False)
+
+    active = Column(Boolean, nullable=False, default=True)
 
     operations = relationship("OperationDB", back_populates="machine")
 
@@ -65,9 +76,12 @@ class TaskDB(Base):
     process_type = Column(Enum(ProcessType), nullable=False)
     operator = Column(String, nullable=True)
 
-    date = Column(Date, nullable=False)
-    start_time = Column(Time, nullable=True)
-    end_time = Column(Time, nullable=True)  # TODO: max 10h50 after start_time
+    # timezone-aware instants for tasks
+    start_at = Column(DateTime(timezone=True), nullable=True)
+    end_at = Column(DateTime(timezone=True), nullable=True)
+
+    num_benches = Column(Integer, nullable=True)
+    num_machines = Column(Integer, nullable=True)
 
     good_pieces = Column(Integer, nullable=True)
     bad_pieces = Column(Integer, nullable=True)

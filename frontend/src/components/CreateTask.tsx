@@ -1,4 +1,3 @@
-// src/components/CreateTask.tsx
 import { useEffect, useState } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import type { Task, TaskCreate } from "../utils/Types";
@@ -14,31 +13,28 @@ type CreateTaskProps = {
   onCreateSuccess: (newTask: Task) => void;
 };
 
-// UI form shape (permissive so we can store "")
+// UI form shape
 type TaskForm = {
-  process_type: string; // plain string for UI; validated on submit
+  process_type: string;
   operator?: string;
-  date?: string;
-  start_time?: string;
-  end_time?: string;
+  start_at_date?: string;
+  start_at_time?: string;
+  end_at_date?: string;
+  end_at_time?: string;
   good_pieces?: number | "";
   bad_pieces?: number | "";
 };
 
-export default function CreateTask({
-  operationId,
-  show,
-  onClose,
-  onCreateSuccess,
-}: CreateTaskProps) {
+export default function CreateTask({ operationId, show, onClose, onCreateSuccess }: CreateTaskProps) {
   const todayDate = new Date().toISOString().slice(0, 10);
 
   const [task, setTask] = useState<TaskForm>({
     process_type: "",
     operator: "",
-    date: todayDate,
-    start_time: "",
-    end_time: "",
+    start_at_date: todayDate,
+    start_at_time: "",
+    end_at_date: todayDate,
+    end_at_time: "",
     good_pieces: "",
     bad_pieces: "",
   });
@@ -54,9 +50,10 @@ export default function CreateTask({
       setTask({
         process_type: "",
         operator: "",
-        date: todayDate,
-        start_time: "",
-        end_time: "",
+        start_at_date: todayDate,
+        start_at_time: "",
+        end_at_date: todayDate,
+        end_at_time: "",
         good_pieces: "",
         bad_pieces: "",
       });
@@ -64,55 +61,43 @@ export default function CreateTask({
       setError(null);
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, todayDate]);
 
-  // Convert and clean TaskForm -> TaskCreate
+  const localPartsToIso = (date: string, time: string) => {
+    if (!date || !time) return null;
+    return new Date(`${date}T${time}`).toISOString();
+  };
+
   const buildPayload = (): TaskCreate => {
-    // Validate process type
     if (!VALID_PROCESS_TYPES.includes(task.process_type as ProcessTypeStr)) {
       throw new Error("Tipo de processo inválido.");
     }
 
-    const payload: any = {
-      process_type: task.process_type as ProcessTypeStr,
-    };
+    const payload: any = { process_type: task.process_type as ProcessTypeStr };
+    if (task.operator?.trim()) payload.operator = task.operator.trim();
 
-    if (task.operator && task.operator.trim() !== "") payload.operator = task.operator.trim();
-    if (task.date && task.date.trim() !== "") payload.date = task.date;
-    if (task.start_time && task.start_time.trim() !== "") payload.start_time = task.start_time;
-    if (task.end_time && task.end_time.trim() !== "") payload.end_time = task.end_time;
+    const startIso = task.start_at_date && task.start_at_time ? localPartsToIso(task.start_at_date, task.start_at_time) : null;
+    const endIso = task.end_at_date && task.end_at_time ? localPartsToIso(task.end_at_date, task.end_at_time) : null;
 
-    if (task.good_pieces !== "" && task.good_pieces !== undefined) {
-      const gp = Number(task.good_pieces);
-      if (!Number.isNaN(gp)) payload.good_pieces = gp;
-    }
-    if (task.bad_pieces !== "" && task.bad_pieces !== undefined) {
-      const bp = Number(task.bad_pieces);
-      if (!Number.isNaN(bp)) payload.bad_pieces = bp;
-    }
+    if (startIso) payload.start_at = startIso;
+    if (endIso) payload.end_at = endIso;
+
+    if (task.good_pieces !== "" && task.good_pieces !== undefined) payload.good_pieces = Number(task.good_pieces);
+    if (task.bad_pieces !== "" && task.bad_pieces !== undefined) payload.bad_pieces = Number(task.bad_pieces);
 
     return payload as TaskCreate;
   };
 
   const handleCreate = async () => {
     setError(null);
-
-    // Basic validation (process_type required)
-    if (!task.process_type || task.process_type.trim() === "") {
+    if (!task.process_type) {
       setError("O campo 'Tipo de Processo' é obrigatório.");
-      return;
-    }
-    if (!VALID_PROCESS_TYPES.includes(task.process_type as ProcessTypeStr)) {
-      setError("Tipo de processo inválido.");
       return;
     }
 
     setLoading(true);
     try {
       const payload = buildPayload();
-
-      // NOTE: new endpoint per your backend: POST /operations/{operation_id}/tasks
       const res = await fetch(`${API_URL}/operations/${operationId}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,19 +105,12 @@ export default function CreateTask({
       });
 
       if (!res.ok) {
-        // try to surface backend error details (Pydantic / FastAPI will often put explanation in JSON)
         let msg = "Erro ao criar tarefa.";
         try {
           const data = await res.json();
-          // common FastAPI error shape: {"detail": "..."} or validation errors array
-          if (data?.detail) {
-            msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
-          } else {
-            msg = JSON.stringify(data);
-          }
+          msg = data?.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : JSON.stringify(data);
         } catch {
-          const txt = await res.text();
-          msg = txt || msg;
+          msg = await res.text() || msg;
         }
         throw new Error(msg);
       }
@@ -152,19 +130,12 @@ export default function CreateTask({
       <Modal.Header closeButton>
         <Modal.Title>Nova Tarefa</Modal.Title>
       </Modal.Header>
-
       <Modal.Body>
         {error && <Alert variant="danger">{error}</Alert>}
-
         <Form>
           <Form.Group className="mb-3">
             <Form.Label>Tipo de Processo</Form.Label>
-            <Form.Select
-              value={task.process_type}
-              onChange={(e) =>
-                setTask((prev) => ({ ...prev, process_type: e.target.value }))
-              }
-            >
+            <Form.Select value={task.process_type} onChange={(e) => setTask(prev => ({ ...prev, process_type: e.target.value }))}>
               <option value="">Selecione um tipo de processo</option>
               <option value="PREPARATION">Preparação de Máquina</option>
               <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
@@ -172,107 +143,47 @@ export default function CreateTask({
             </Form.Select>
 
             <Form.Label className="mt-3">Operador</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Nome do operador"
-              value={task.operator ?? ""}
-              onChange={(e) =>
-                setTask((prev) => ({ ...prev, operator: e.target.value }))
-              }
-            />
+            <Form.Control type="text" placeholder="Nome do operador" value={task.operator ?? ""} onChange={(e) => setTask(prev => ({ ...prev, operator: e.target.value }))} />
           </Form.Group>
 
-          <div className="mb-2">
-            <div className="d-flex justify-content-center">
-              <Button
-                variant="info"
-                size="sm"
-                onClick={() => setShowOptionals((s) => !s)}
-              >
-                {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
-              </Button>
-            </div>
+          <div className="mb-2 d-flex justify-content-center">
+            <Button variant="info" size="sm" onClick={() => setShowOptionals(s => !s)}>
+              {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
+            </Button>
           </div>
 
           {showOptionals && (
             <>
               <Row className="mb-3">
                 <Col>
-                  <Form.Label>Data</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={task.date ?? todayDate}
-                    onChange={(e) =>
-                      setTask((prev) => ({ ...prev, date: e.target.value }))
-                    }
-                  />
-                </Col>
-                <Col>
                   <Form.Label>Início</Form.Label>
-                  <Form.Control
-                    type="time"
-                    value={task.start_time ?? ""}
-                    onChange={(e) =>
-                      setTask((prev) => ({ ...prev, start_time: e.target.value }))
-                    }
-                  />
+                  <Form.Control type="date" value={task.start_at_date ?? todayDate} onChange={e => setTask(prev => ({ ...prev, start_at_date: e.target.value }))} />
+                  <Form.Control type="time" value={task.start_at_time ?? ""} onChange={e => setTask(prev => ({ ...prev, start_at_time: e.target.value }))} />
                 </Col>
                 <Col>
                   <Form.Label>Fim</Form.Label>
-                  <Form.Control
-                    type="time"
-                    value={task.end_time ?? ""}
-                    onChange={(e) =>
-                      setTask((prev) => ({ ...prev, end_time: e.target.value }))
-                    }
-                  />
+                  <Form.Control type="date" value={task.end_at_date ?? todayDate} onChange={e => setTask(prev => ({ ...prev, end_at_date: e.target.value }))} />
+                  <Form.Control type="time" value={task.end_at_time ?? ""} onChange={e => setTask(prev => ({ ...prev, end_at_time: e.target.value }))} />
                 </Col>
               </Row>
 
               <Row className="mb-2">
                 <Col>
                   <Form.Label>Peças Boas</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min={0}
-                    value={task.good_pieces === "" ? "" : String(task.good_pieces)}
-                    onChange={(e) =>
-                      setTask((prev) => ({
-                        ...prev,
-                        good_pieces:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      }))
-                    }
-                  />
+                  <Form.Control type="number" min={0} value={task.good_pieces === "" ? "" : String(task.good_pieces)} onChange={e => setTask(prev => ({ ...prev, good_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
                 </Col>
                 <Col>
                   <Form.Label>Peças Ruins</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min={0}
-                    value={task.bad_pieces === "" ? "" : String(task.bad_pieces)}
-                    onChange={(e) =>
-                      setTask((prev) => ({
-                        ...prev,
-                        bad_pieces:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      }))
-                    }
-                  />
+                  <Form.Control type="number" min={0} value={task.bad_pieces === "" ? "" : String(task.bad_pieces)} onChange={e => setTask(prev => ({ ...prev, bad_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
                 </Col>
               </Row>
             </>
           )}
         </Form>
       </Modal.Body>
-
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button variant="primary" onClick={handleCreate} disabled={loading}>
-          {loading ? <Spinner size="sm" animation="border" /> : "Criar"}
-        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
+        <Button variant="primary" onClick={handleCreate} disabled={loading}>{loading ? <Spinner size="sm" animation="border" /> : "Criar"}</Button>
       </Modal.Footer>
     </Modal>
   );

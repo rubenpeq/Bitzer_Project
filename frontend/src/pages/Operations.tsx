@@ -126,22 +126,37 @@ export default function OperationDetail() {
     })();
   }, [operationId, API_URL]);
 
-  // search/filter tasks
+  // -------------------
+  // Task search/filter
+  // -------------------
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) {
       setFilteredTasks(tasks);
       return;
     }
-    const contains = (val: any) => val !== undefined && val !== null && String(val).toLowerCase().includes(term);
-    setFilteredTasks(tasks.filter((t) => contains(t.process_type) || contains(t.date) || contains(t.operator)));
+    const contains = (val: any) =>
+      val !== undefined && val !== null && String(val).toLowerCase().includes(term);
+    
+    setFilteredTasks(
+      tasks.filter((t) =>
+        contains(t.process_type) ||
+        contains(t.operator) ||
+        contains(t.start_at) || // new
+        contains(t.end_at)
+      )
+    );
   }, [searchTerm, tasks]);
 
+  // -------------------
+  // Table headers
+  // -------------------
   const taskHeaders: { key: keyof Task | "operator"; label: string }[] = [
     { key: "process_type", label: "Tipo de Processo" },
-    { key: "date", label: "Data" },
-    { key: "start_time", label: "Início" },
-    { key: "end_time", label: "Fim" },
+    { key: "start_at", label: "Início" },
+    { key: "end_at", label: "Fim" },
+    { key: "num_benches", label: "Bancadas" },
+    { key: "num_machines", label: "Máquinas" },
     { key: "good_pieces", label: "Peças Boas" },
     { key: "bad_pieces", label: "Peças Defetivas" },
     { key: "operator", label: "Operador" },
@@ -261,8 +276,10 @@ export default function OperationDetail() {
               }}
             >
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
-
-              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem", position: "relative" }}>
+              <Card.Text
+                as="div"
+                style={{ fontWeight: "bold", fontSize: "1.1rem", position: "relative" }}
+              >
                 {key === "total_pieces" && piecesSummary ? (
                   <div style={{ position: "relative" }}>
                     <ProgressBar
@@ -346,11 +363,16 @@ export default function OperationDetail() {
             </thead>
             <tbody>
               {sortedTasks.map((task) => (
-                <tr key={task.id} onDoubleClick={() => handleRowDoubleClick(task.id)} style={{ cursor: "pointer" }}>
+                <tr
+                  key={task.id}
+                  onDoubleClick={() => handleRowDoubleClick(task.id)}
+                  style={{ cursor: "pointer" }}
+                >
                   <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
-                  <td>{task.date}</td>
-                  <td>{task.start_time ?? "--:--:--"}</td>
-                  <td>{task.end_time ?? "--:--:--"}</td>
+                  <td>{task.start_at ? new Date(task.start_at).toLocaleString() : "--:--"}</td>
+                  <td>{task.end_at ? new Date(task.end_at).toLocaleString() : "--:--"}</td>
+                  <td>{task.num_benches ?? "-"}</td>
+                  <td>{task.num_machines ?? "-"}</td>
                   <td>{task.good_pieces ?? "-"}</td>
                   <td>{task.bad_pieces ?? "-"}</td>
                   <td>{task.operator ?? "-"}</td>
