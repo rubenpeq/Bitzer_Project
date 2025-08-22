@@ -208,11 +208,7 @@ export default function TaskDetail() {
           { key: "operator", label: "Operador", value: task.operator ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
-            <Card
-              className="p-3"
-              style={{ cursor: "pointer" }}
-              onClick={() => openEditModal(key, label, value === "--:--:--" ? "" : value)}
-            >
+            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(key, label, value === "--:--:--" ? "" : value)}>
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value}</Card.Text>
             </Card>
@@ -220,16 +216,7 @@ export default function TaskDetail() {
         ))}
       </Row>
 
-      <EditTask
-        show={showEdit}
-        onHide={() => setShowEdit(false)}
-        apiUrl={API_URL}
-        taskId={task.id}
-        fieldKey={editFieldKey}
-        label={editLabel}
-        initialValue={editInitial}
-        onSaved={handleTaskSaved}
-      />
+      <EditTask show={showEdit} onHide={() => setShowEdit(false)} apiUrl={API_URL} taskId={task.id} fieldKey={editFieldKey} label={editLabel} initialValue={editInitial} onSaved={handleTaskSaved} />
 
       <div className="text-center mb-4">
         <Button
@@ -246,36 +233,35 @@ export default function TaskDetail() {
       </div>
 
       <div className="position-fixed start-0 end-0 p-3 shadow" style={{ bottom: "10px", zIndex: 1030 }}>
-        <Form onSubmit={(e) => { e.preventDefault(); handleSavePieces(); }}>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSavePieces();
+          }}
+        >
           <Row className="justify-content-center align-items-end">
             <Col xs={4} sm={3} md={2}>
               <Form.Group controlId="goodPieces">
-                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>Peças Boas</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={goodPiecesInput}
-                  onChange={(e) => setGoodPiecesInput(e.target.value === "" ? "" : Number(e.target.value))}
-                  disabled={!piecesEditable}
-                  min={0}
-                />
+                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>
+                  Peças Boas
+                </Form.Label>
+                <Form.Control type="number" value={goodPiecesInput} onChange={(e) => setGoodPiecesInput(e.target.value === "" ? "" : Number(e.target.value))} disabled={!piecesEditable} min={0} />
               </Form.Group>
             </Col>
 
             <Col xs={4} sm={3} md={2}>
               <Form.Group controlId="badPieces">
-                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>Peças Defetivas</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={badPiecesInput}
-                  onChange={(e) => setBadPiecesInput(e.target.value === "" ? "" : Number(e.target.value))}
-                  disabled={!piecesEditable}
-                  min={0}
-                />
+                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>
+                  Peças Defetivas
+                </Form.Label>
+                <Form.Control type="number" value={badPiecesInput} onChange={(e) => setBadPiecesInput(e.target.value === "" ? "" : Number(e.target.value))} disabled={!piecesEditable} min={0} />
               </Form.Group>
             </Col>
 
             <Col xs="auto">
-              <Button type="submit" variant="success" disabled={!piecesEditable}>Salvar</Button>
+              <Button type="submit" variant="success" disabled={!piecesEditable}>
+                Salvar
+              </Button>
             </Col>
           </Row>
         </Form>

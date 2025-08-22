@@ -4,7 +4,7 @@ import type { Task, TaskCreate } from "../utils/Types";
 
 // Allowed process types (string literals)
 const VALID_PROCESS_TYPES = ["PREPARATION", "QUALITY_CONTROL", "PROCESSING"] as const;
-type ProcessTypeStr = typeof VALID_PROCESS_TYPES[number];
+type ProcessTypeStr = (typeof VALID_PROCESS_TYPES)[number];
 
 type CreateTaskProps = {
   operationId: number;
@@ -110,7 +110,7 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
           const data = await res.json();
           msg = data?.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : JSON.stringify(data);
         } catch {
-          msg = await res.text() || msg;
+          msg = (await res.text()) || msg;
         }
         throw new Error(msg);
       }
@@ -135,7 +135,7 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
         <Form>
           <Form.Group className="mb-3">
             <Form.Label>Tipo de Processo</Form.Label>
-            <Form.Select value={task.process_type} onChange={(e) => setTask(prev => ({ ...prev, process_type: e.target.value }))}>
+            <Form.Select value={task.process_type} onChange={(e) => setTask((prev) => ({ ...prev, process_type: e.target.value }))}>
               <option value="">Selecione um tipo de processo</option>
               <option value="PREPARATION">Preparação de Máquina</option>
               <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
@@ -143,11 +143,11 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
             </Form.Select>
 
             <Form.Label className="mt-3">Operador</Form.Label>
-            <Form.Control type="text" placeholder="Nome do operador" value={task.operator ?? ""} onChange={(e) => setTask(prev => ({ ...prev, operator: e.target.value }))} />
+            <Form.Control type="text" placeholder="Nome do operador" value={task.operator ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, operator: e.target.value }))} />
           </Form.Group>
 
           <div className="mb-2 d-flex justify-content-center">
-            <Button variant="info" size="sm" onClick={() => setShowOptionals(s => !s)}>
+            <Button variant="info" size="sm" onClick={() => setShowOptionals((s) => !s)}>
               {showOptionals ? "Ocultar opcionais" : "Mostrar opcionais"}
             </Button>
           </div>
@@ -157,24 +157,34 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
               <Row className="mb-3">
                 <Col>
                   <Form.Label>Início</Form.Label>
-                  <Form.Control type="date" value={task.start_at_date ?? todayDate} onChange={e => setTask(prev => ({ ...prev, start_at_date: e.target.value }))} />
-                  <Form.Control type="time" value={task.start_at_time ?? ""} onChange={e => setTask(prev => ({ ...prev, start_at_time: e.target.value }))} />
+                  <Form.Control type="date" value={task.start_at_date ?? todayDate} onChange={(e) => setTask((prev) => ({ ...prev, start_at_date: e.target.value }))} />
+                  <Form.Control type="time" value={task.start_at_time ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, start_at_time: e.target.value }))} />
                 </Col>
                 <Col>
                   <Form.Label>Fim</Form.Label>
-                  <Form.Control type="date" value={task.end_at_date ?? todayDate} onChange={e => setTask(prev => ({ ...prev, end_at_date: e.target.value }))} />
-                  <Form.Control type="time" value={task.end_at_time ?? ""} onChange={e => setTask(prev => ({ ...prev, end_at_time: e.target.value }))} />
+                  <Form.Control type="date" value={task.end_at_date ?? todayDate} onChange={(e) => setTask((prev) => ({ ...prev, end_at_date: e.target.value }))} />
+                  <Form.Control type="time" value={task.end_at_time ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, end_at_time: e.target.value }))} />
                 </Col>
               </Row>
 
               <Row className="mb-2">
                 <Col>
                   <Form.Label>Peças Boas</Form.Label>
-                  <Form.Control type="number" min={0} value={task.good_pieces === "" ? "" : String(task.good_pieces)} onChange={e => setTask(prev => ({ ...prev, good_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    value={task.good_pieces === "" ? "" : String(task.good_pieces)}
+                    onChange={(e) => setTask((prev) => ({ ...prev, good_pieces: e.target.value === "" ? "" : Number(e.target.value) }))}
+                  />
                 </Col>
                 <Col>
                   <Form.Label>Peças Ruins</Form.Label>
-                  <Form.Control type="number" min={0} value={task.bad_pieces === "" ? "" : String(task.bad_pieces)} onChange={e => setTask(prev => ({ ...prev, bad_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    value={task.bad_pieces === "" ? "" : String(task.bad_pieces)}
+                    onChange={(e) => setTask((prev) => ({ ...prev, bad_pieces: e.target.value === "" ? "" : Number(e.target.value) }))}
+                  />
                 </Col>
               </Row>
             </>
@@ -182,8 +192,12 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
-        <Button variant="primary" onClick={handleCreate} disabled={loading}>{loading ? <Spinner size="sm" animation="border" /> : "Criar"}</Button>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button variant="primary" onClick={handleCreate} disabled={loading}>
+          {loading ? <Spinner size="sm" animation="border" /> : "Criar"}
+        </Button>
       </Modal.Footer>
     </Modal>
   );

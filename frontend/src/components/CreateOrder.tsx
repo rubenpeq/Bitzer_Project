@@ -140,13 +140,7 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
               Nº Ordem
             </Form.Label>
             <Col sm={8}>
-              <Form.Control
-                type="number"
-                min={1}
-                value={formData.order_number}
-                onChange={(e) => handleChange("order_number", e.target.value)}
-                disabled={loading}
-              />
+              <Form.Control type="number" min={1} value={formData.order_number} onChange={(e) => handleChange("order_number", e.target.value)} disabled={loading} />
             </Col>
           </Form.Group>
 
@@ -155,13 +149,7 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
               Nº Material
             </Form.Label>
             <Col sm={8}>
-              <Form.Control
-                type="number"
-                min={1}
-                value={formData.material_number}
-                onChange={(e) => handleChange("material_number", e.target.value)}
-                disabled={loading}
-              />
+              <Form.Control type="number" min={1} value={formData.material_number} onChange={(e) => handleChange("material_number", e.target.value)} disabled={loading} />
             </Col>
           </Form.Group>
 
@@ -170,13 +158,7 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
               Nº Peças
             </Form.Label>
             <Col sm={8}>
-              <Form.Control
-                type="number"
-                min={1}
-                value={formData.num_pieces}
-                onChange={(e) => handleChange("num_pieces", e.target.value)}
-                disabled={loading}
-              />
+              <Form.Control type="number" min={1} value={formData.num_pieces} onChange={(e) => handleChange("num_pieces", e.target.value)} disabled={loading} />
             </Col>
           </Form.Group>
 
@@ -195,12 +177,7 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
                   Data Início
                 </Form.Label>
                 <Col sm={8}>
-                  <Form.Control
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleChange("start_date", e.target.value)}
-                    disabled={loading}
-                  />
+                  <Form.Control type="date" value={formData.start_date} onChange={(e) => handleChange("start_date", e.target.value)} disabled={loading} />
                 </Col>
               </Form.Group>
 
@@ -209,12 +186,7 @@ export default function CreateNewOrder({ show, onClose, onCreateSuccess }: Props
                   Data Fim
                 </Form.Label>
                 <Col sm={8}>
-                  <Form.Control
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleChange("end_date", e.target.value)}
-                    disabled={loading}
-                  />
+                  <Form.Control type="date" value={formData.end_date} onChange={(e) => handleChange("end_date", e.target.value)} disabled={loading} />
                 </Col>
               </Form.Group>
             </>

@@ -24,10 +24,10 @@ export type Machine = {
 export type Operation = {
   id: number;
   operation_code: string;
-  order_id: number;           // now references order by ID
+  order_id: number; // now references order by ID
   machine_id?: number | null; // references machine by ID (nullable)
-  machine?: Machine;          // optional expanded machine details
-  tasks?: Task[];             // operations include tasks
+  machine?: Machine; // optional expanded machine details
+  tasks?: Task[]; // operations include tasks
 };
 
 // -------------------------------
@@ -76,7 +76,7 @@ export type Order = {
   order_number: number;
   material_number: number;
   start_date?: string; // YYYY-MM-DD
-  end_date?: string;   // YYYY-MM-DD
+  end_date?: string; // YYYY-MM-DD
   num_pieces: number;
   operations?: Operation[];
 };
@@ -97,7 +97,7 @@ export const processTypeLabels: Record<string, string> = {
   PROCESSING: "Processamento",
   PREPARATION: "Preparação de Máquina",
   CNC: "CNC",
-  CONVENTIONAL: "Convencional"
+  CONVENTIONAL: "Convencional",
 };
 
 // -------------------------------

@@ -15,17 +15,7 @@ type Props = {
   onSaved: (updatedOrder: Order) => void;
 };
 
-export default function EditOrderFieldModal({
-  show,
-  onHide,
-  apiUrl,
-  currentOrderId,
-  orderNumber,
-  fieldKey,
-  label,
-  initialValue,
-  onSaved,
-}: Props) {
+export default function EditOrderFieldModal({ show, onHide, apiUrl, currentOrderId, orderNumber, fieldKey, label, initialValue, onSaved }: Props) {
   const [value, setValue] = useState<string>(initialValue ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

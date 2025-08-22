@@ -78,13 +78,7 @@ export default function OrderDetail() {
     const t = searchTerm.trim().toLowerCase();
     if (!t) return setFilteredOps(operations);
     const contains = (v: any) => v !== undefined && v !== null && String(v).toLowerCase().includes(t);
-    setFilteredOps(
-      operations.filter((op) =>
-        contains(op.operation_code) ||
-        contains(op.machine?.machine_type) ||
-        contains(op.machine?.machine_location)
-      )
-    );
+    setFilteredOps(operations.filter((op) => contains(op.operation_code) || contains(op.machine?.machine_type) || contains(op.machine?.machine_location)));
   }, [searchTerm, operations]);
 
   // sorting (supports nested machine fields)
@@ -112,9 +106,7 @@ export default function OrderDetail() {
   // fetch operation id (note: operation_code is now string)
   const handleRowDoubleClick = async (order_number: number, op_code: string) => {
     try {
-      const res = await fetch(
-        `${API_URL}/operations/get_id?order_number=${order_number}&operation_code=${encodeURIComponent(op_code)}`
-      );
+      const res = await fetch(`${API_URL}/operations/get_id?order_number=${order_number}&operation_code=${encodeURIComponent(op_code)}`);
       if (!res.ok) throw new Error("Failed to fetch operation ID");
       const id = await res.json();
       navigate(`/operation/${id}`);
@@ -123,7 +115,12 @@ export default function OrderDetail() {
     }
   };
 
-  if (loading) return <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}><Spinner animation="border" /></div>;
+  if (loading)
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
+        <Spinner animation="border" />
+      </div>
+    );
   if (!order) return <Alert variant="danger">Ordem não encontrada</Alert>;
 
   return (
@@ -132,7 +129,11 @@ export default function OrderDetail() {
         <ArrowLeft className="me-2" /> Voltar
       </Button>
 
-      {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
+      {error && (
+        <Alert variant="danger" onClose={() => setError(null)} dismissible>
+          {error}
+        </Alert>
+      )}
 
       {/* Summary cards (click to edit) */}
       <Row className="mb-4 gx-3 justify-content-center text-center">
@@ -148,9 +149,7 @@ export default function OrderDetail() {
           <Col key={String(key)} xs={12} sm={6} md={2} className="mb-3">
             <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(String(key), label, value)}>
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
-              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                {value === "" || value === null || value === undefined ? "-" : String(value)}
-              </Card.Text>
+              <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value === "" || value === null || value === undefined ? "-" : String(value)}</Card.Text>
             </Card>
           </Col>
         ))}
@@ -168,7 +167,13 @@ export default function OrderDetail() {
         onSaved={onSavedOrder}
       />
 
-      <Form.Control type="search" placeholder="Pesquisar operações... (código de operação, tipo de máquina ou id de máquina)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
+      <Form.Control
+        type="search"
+        placeholder="Pesquisar operações... (código de operação, tipo de máquina ou id de máquina)"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="mb-3"
+      />
 
       {sortedOperations.length === 0 ? (
         <Alert variant="warning">Nenhuma operação encontrada.</Alert>
@@ -178,25 +183,16 @@ export default function OrderDetail() {
             <thead>
               <tr>
                 {operationHeaders.map(({ key, label }) => (
-                  <th
-                    key={key}
-                    style={{ cursor: "pointer", textAlign: "center" }}
-                    onClick={() =>
-                      setSortConfig({ key, direction: sortConfig?.direction === "asc" ? "desc" : "asc" })
-                    }
-                  >
-                    {label}{sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
+                  <th key={key} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => setSortConfig({ key, direction: sortConfig?.direction === "asc" ? "desc" : "asc" })}>
+                    {label}
+                    {sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sortedOperations.map((op) => (
-                <tr
-                  key={op.id}
-                  onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), op.operation_code)}
-                  style={{ cursor: "pointer" }}
-                >
+                <tr key={op.id} onDoubleClick={() => handleRowDoubleClick(Number(orderNumber), op.operation_code)} style={{ cursor: "pointer" }}>
                   <td className="text-center">{op.operation_code}</td>
                   <td className="text-center">{op.machine?.machine_type ? processTypeLabels[op.machine.machine_type] : "—"}</td>
                   <td className="text-center">{op.machine?.machine_location ?? "—"}</td>

@@ -15,7 +15,7 @@ type Props = {
 };
 
 const VALID_PROCESS_TYPES = ["PREPARATION", "QUALITY_CONTROL", "PROCESSING"] as const;
-type ProcessTypeStr = typeof VALID_PROCESS_TYPES[number];
+type ProcessTypeStr = (typeof VALID_PROCESS_TYPES)[number];
 
 // Convert ISO string to local "YYYY-MM-DD" and "HH:MM"
 const isoToLocalParts = (iso?: string | null) => {
@@ -54,7 +54,7 @@ export default function EditTask({ show, onHide, apiUrl, taskId, fieldKey, label
     // time fields
     if ((fieldKey === "start_at" || fieldKey === "end_at") && show) {
       fetch(`${apiUrl}/task/${taskId}`)
-        .then((r) => r.ok ? r.json() : Promise.reject("Falha ao carregar tarefa"))
+        .then((r) => (r.ok ? r.json() : Promise.reject("Falha ao carregar tarefa")))
         .then((task: Task) => {
           const start = isoToLocalParts(task.start_at ?? null);
           const end = isoToLocalParts(task.end_at ?? null);
@@ -133,14 +133,18 @@ export default function EditTask({ show, onHide, apiUrl, taskId, fieldKey, label
       return (
         <>
           <Form.Group as={Row} className="mb-2">
-            <Form.Label column sm={4}>Início</Form.Label>
+            <Form.Label column sm={4}>
+              Início
+            </Form.Label>
             <Col sm={8}>
               <Form.Control type="date" value={startAtDate} onChange={(e) => setStartAtDate(e.target.value)} disabled={loading} />
               <Form.Control type="time" value={startAtTime} onChange={(e) => setStartAtTime(e.target.value)} disabled={loading} />
             </Col>
           </Form.Group>
           <Form.Group as={Row} className="mb-2">
-            <Form.Label column sm={4}>Fim</Form.Label>
+            <Form.Label column sm={4}>
+              Fim
+            </Form.Label>
             <Col sm={8}>
               <Form.Control type="date" value={endAtDate} onChange={(e) => setEndAtDate(e.target.value)} disabled={loading} />
               <Form.Control type="time" value={endAtTime} onChange={(e) => setEndAtTime(e.target.value)} disabled={loading} />
@@ -163,8 +167,12 @@ export default function EditTask({ show, onHide, apiUrl, taskId, fieldKey, label
         <Form.Group>{renderInput()}</Form.Group>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide} disabled={loading}>Cancelar</Button>
-        <Button variant="primary" onClick={handleSave} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+        <Button variant="secondary" onClick={onHide} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button variant="primary" onClick={handleSave} disabled={loading}>
+          {loading ? "Salvando..." : "Salvar"}
+        </Button>
       </Modal.Footer>
     </Modal>
   );

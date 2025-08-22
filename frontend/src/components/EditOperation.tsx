@@ -12,15 +12,7 @@ type Props = {
   onSaved: (updated: Operation) => void;
 };
 
-export default function EditOperationModal({
-  show,
-  onHide,
-  apiUrl,
-  operation,
-  fieldKey,
-  initialValue,
-  onSaved,
-}: Props) {
+export default function EditOperationModal({ show, onHide, apiUrl, operation, fieldKey, initialValue, onSaved }: Props) {
   const [operationCode, setOperationCode] = useState<string>("");
   const [machines, setMachines] = useState<Machine[] | null>(null);
   const [selectedMachineId, setSelectedMachineId] = useState<number | null>(null); // null means no machine
@@ -39,7 +31,7 @@ export default function EditOperationModal({
   // initialize local values based on field
   useEffect(() => {
     if (fieldKey === "operation_code") {
-      setOperationCode(initialValue ?? (operation?.operation_code ?? ""));
+      setOperationCode(initialValue ?? operation?.operation_code ?? "");
     } else if (fieldKey === "machine_location") {
       setSelectedMachineId(operation?.machine?.id ?? null);
     }
@@ -301,7 +293,7 @@ export default function EditOperationModal({
                     <Button
                       variant="outline-secondary"
                       onClick={() => {
-                        setOpen(v => !v);
+                        setOpen((v) => !v);
                         if (!open && selectedMachineId !== null) {
                           const sel = machines.find((m) => String(m.id) === String(selectedMachineId));
                           if (sel) setSearchText(labelFor(sel));
@@ -332,42 +324,37 @@ export default function EditOperationModal({
                         <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Nenhuma</div>
                       </li>
 
-                      {filteredMachines.length === 0 ? null : (
-                        filteredMachines.map((m, idx) => {
-                          const label = labelFor(m);
-                          const listIndex = idx + 1;
-                          const key = String(m.id ?? idx);
-                          const isHighlighted = listIndex === highlightIndex;
-                          const isSelected = String(m.id) === String(selectedMachineId);
-                          return (
-                            <li
-                              key={key}
-                              role="option"
-                              aria-selected={isSelected}
-                              className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
-                              onMouseEnter={() => setHighlightIndex(listIndex)}
-                              onMouseDown={(ev) => {
-                                ev.preventDefault();
-                                onSelectMachine(m);
-                              }}
-                              style={{ cursor: "pointer" }}
-                            >
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
-                            </li>
-                          );
-                        })
-                      )}
+                      {filteredMachines.length === 0
+                        ? null
+                        : filteredMachines.map((m, idx) => {
+                            const label = labelFor(m);
+                            const listIndex = idx + 1;
+                            const key = String(m.id ?? idx);
+                            const isHighlighted = listIndex === highlightIndex;
+                            const isSelected = String(m.id) === String(selectedMachineId);
+                            return (
+                              <li
+                                key={key}
+                                role="option"
+                                aria-selected={isSelected}
+                                className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
+                                onMouseEnter={() => setHighlightIndex(listIndex)}
+                                onMouseDown={(ev) => {
+                                  ev.preventDefault();
+                                  onSelectMachine(m);
+                                }}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+                              </li>
+                            );
+                          })}
                       {filteredMachines.length === 0 && <li className="list-group-item text-muted">Nenhuma máquina corresponde à pesquisa.</li>}
                     </ul>
                   )}
                 </div>
               ) : (
-                <Form.Control
-                  type="number"
-                  value={selectedMachineId ?? ""}
-                  onChange={(e) => setSelectedMachineId(e.target.value === "" ? null : Number(e.target.value))}
-                  disabled={loading}
-                />
+                <Form.Control type="number" value={selectedMachineId ?? ""} onChange={(e) => setSelectedMachineId(e.target.value === "" ? null : Number(e.target.value))} disabled={loading} />
               )}
             </Col>
           </Form.Group>

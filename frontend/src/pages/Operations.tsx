@@ -1,16 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
-import {
-  Table,
-  Spinner,
-  Alert,
-  Button,
-  Row,
-  Col,
-  Card,
-  Form,
-  ProgressBar
-} from "react-bootstrap";
+import { Table, Spinner, Alert, Button, Row, Col, Card, Form, ProgressBar } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
 import { processTypeLabels, type Operation, type Task } from "../utils/Types";
 import CreateTask from "../components/CreateTask";
@@ -37,9 +27,7 @@ export default function OperationDetail() {
 
   // Edit operation modal state (we open it for a single field)
   const [showEditOp, setShowEditOp] = useState(false);
-  const [editOpFieldKey, setEditOpFieldKey] = useState<"operation_code" | "machine_location">(
-    "operation_code"
-  );
+  const [editOpFieldKey, setEditOpFieldKey] = useState<"operation_code" | "machine_location">("operation_code");
   const [editOpInitial, setEditOpInitial] = useState<any>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -135,15 +123,15 @@ export default function OperationDetail() {
       setFilteredTasks(tasks);
       return;
     }
-    const contains = (val: any) =>
-      val !== undefined && val !== null && String(val).toLowerCase().includes(term);
-    
+    const contains = (val: any) => val !== undefined && val !== null && String(val).toLowerCase().includes(term);
+
     setFilteredTasks(
-      tasks.filter((t) =>
-        contains(t.process_type) ||
-        contains(t.operator) ||
-        contains(t.start_at) || // new
-        contains(t.end_at)
+      tasks.filter(
+        (t) =>
+          contains(t.process_type) ||
+          contains(t.operator) ||
+          contains(t.start_at) || // new
+          contains(t.end_at)
       )
     );
   }, [searchTerm, tasks]);
@@ -241,11 +229,31 @@ export default function OperationDetail() {
   // Header items: order number & machine type are informational only (not editable here).
   // the progress card is shown as a small card in the header row
   const headerItems = [
-    { key: "order_number", label: "Nº Ordem", value: displayOrderNumber ?? operation.order_id, editable: false },
-    { key: "operation_code", label: "Código Operação", value: operation.operation_code, editable: true },
-    { key: "machine_type", label: "Tipo Máquina", value: operation.machine?.machine_type ?? "—", editable: false },
-    { key: "machine_location", label: "Cen. Trabalho", value: operation.machine?.machine_location ?? "—", editable: true },
-    { key: "total_pieces", label: "Progresso", value: null, editable: false }
+    {
+      key: "order_number",
+      label: "Nº Ordem",
+      value: displayOrderNumber ?? operation.order_id,
+      editable: false,
+    },
+    {
+      key: "operation_code",
+      label: "Código Operação",
+      value: operation.operation_code,
+      editable: true,
+    },
+    {
+      key: "machine_type",
+      label: "Tipo Máquina",
+      value: operation.machine?.machine_type ?? "—",
+      editable: false,
+    },
+    {
+      key: "machine_location",
+      label: "Cen. Trabalho",
+      value: operation.machine?.machine_location ?? "—",
+      editable: true,
+    },
+    { key: "total_pieces", label: "Progresso", value: null, editable: false },
   ] as const;
 
   return (
@@ -269,32 +277,26 @@ export default function OperationDetail() {
               }}
               onClick={() => {
                 if (!editable) return;
-                if (key === "operation_code")
-                  openEditForField("operation_code", value);
-                else if (key === "machine_location")
-                  openEditForField("machine_location", value);
+                if (key === "operation_code") openEditForField("operation_code", value);
+                else if (key === "machine_location") openEditForField("machine_location", value);
               }}
             >
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text
                 as="div"
-                style={{ fontWeight: "bold", fontSize: "1.1rem", position: "relative" }}
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  position: "relative",
+                }}
               >
                 {key === "total_pieces" && piecesSummary ? (
-                  <div style={{ position: "relative" }}>
+                  <div style={{ position: "relative", height: "1.8rem" }}>
                     <ProgressBar
-                      now={
-                        orderNumPieces
-                          ? Math.min((piecesSummary.total_pieces / orderNumPieces) * 100, 100)
-                          : 0
-                      }
-                      variant={
-                        orderNumPieces && piecesSummary.total_pieces > orderNumPieces
-                          ? "danger"
-                          : "success"
-                      }
-                      animated={true}
-                      style={{ height: "1.8rem" }}
+                      now={orderNumPieces ? Math.min((piecesSummary.total_pieces / orderNumPieces) * 100, 100) : 0}
+                      variant={orderNumPieces && piecesSummary.total_pieces > orderNumPieces ? "danger" : "success"}
+                      animated
+                      style={{ height: "100%" }}
                     />
                     {/* Label overlay */}
                     <div
@@ -303,8 +305,10 @@ export default function OperationDetail() {
                         top: 0,
                         left: "50%",
                         transform: "translateX(-50%)",
+                        width: "100%",
                         height: "100%",
                         display: "flex",
+                        justifyContent: "center",
                         alignItems: "center",
                         fontWeight: "bold",
                         color: "black",
@@ -337,13 +341,7 @@ export default function OperationDetail() {
       />
 
       {/* Search bar */}
-      <Form.Control
-        type="search"
-        placeholder="Pesquisar tarefas... (tipo de processo, data ou operador)"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-3"
-      />
+      <Form.Control type="search" placeholder="Pesquisar tarefas... (tipo de processo, data ou operador)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
 
       {/* Tasks table */}
       {sortedTasks.length === 0 ? (
@@ -363,11 +361,7 @@ export default function OperationDetail() {
             </thead>
             <tbody>
               {sortedTasks.map((task) => (
-                <tr
-                  key={task.id}
-                  onDoubleClick={() => handleRowDoubleClick(task.id)}
-                  style={{ cursor: "pointer" }}
-                >
+                <tr key={task.id} onDoubleClick={() => handleRowDoubleClick(task.id)} style={{ cursor: "pointer" }}>
                   <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
                   <td>{task.start_at ? new Date(task.start_at).toLocaleString() : "--:--"}</td>
                   <td>{task.end_at ? new Date(task.end_at).toLocaleString() : "--:--"}</td>
@@ -384,13 +378,7 @@ export default function OperationDetail() {
       )}
 
       {/* Floating Create Task button */}
-      <Button
-        variant="success"
-        className="position-fixed"
-        size="lg"
-        style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
-        onClick={() => setShowCreateTaskModal(true)}
-      >
+      <Button variant="success" className="position-fixed" size="lg" style={{ bottom: "20px", right: "20px", zIndex: 1050 }} onClick={() => setShowCreateTaskModal(true)}>
         + Nova Tarefa
       </Button>
 

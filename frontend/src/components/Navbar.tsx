@@ -7,12 +7,7 @@ export default function AppNavbar() {
     <Navbar className="justify-content-center py-3">
       <Container className="justify-content-center">
         <Navbar.Brand as={Link} to={"/"}>
-          <img
-            src={logo}
-            alt="Bitzer Logo"
-            height="60"
-            className="d-inline-block align-top"
-          />
+          <img src={logo} alt="Bitzer Logo" height="60" className="d-inline-block align-top" />
         </Navbar.Brand>
       </Container>
     </Navbar>

@@ -52,10 +52,7 @@ export default function Home() {
         setFilteredOrders(orders);
         return;
       }
-      const filtered = orders.filter((order) =>
-        String(order.order_number).toLowerCase().includes(term) ||
-        String(order.material_number).toLowerCase().includes(term)
-      );
+      const filtered = orders.filter((order) => String(order.order_number).toLowerCase().includes(term) || String(order.material_number).toLowerCase().includes(term));
       setFilteredOrders(filtered);
     }, 300);
     return () => clearTimeout(timeout);
@@ -116,13 +113,7 @@ export default function Home() {
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
-      <Form.Control
-        type="search"
-        placeholder="Pesquisar Ordem ... (nº Ordem ou nº Material)"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-3"
-      />
+      <Form.Control type="search" placeholder="Pesquisar Ordem ... (nº Ordem ou nº Material)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
 
       {loading ? (
         <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
@@ -137,19 +128,14 @@ export default function Home() {
               <tr>
                 {orderHeaders.map(({ key, label }) => (
                   <th key={key} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => handleSort(key)}>
-                    {label}{" "}
-                    {sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
+                    {label} {sortConfig?.key === key ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sortedOrders.map((order, index) => (
-                <tr
-                  key={order.id ?? index}
-                  onDoubleClick={() => handleRowDoubleClick(order.order_number)}
-                  style={{ cursor: "pointer" }}
-                >
+                <tr key={order.id ?? index} onDoubleClick={() => handleRowDoubleClick(order.order_number)} style={{ cursor: "pointer" }}>
                   <td>{order.order_number}</td>
                   <td>{order.material_number}</td>
                   <td>{order.start_date ?? "-"}</td>
@@ -162,13 +148,7 @@ export default function Home() {
         </div>
       )}
 
-      <Button
-        variant="success"
-        className="position-fixed"
-        size="lg"
-        style={{ bottom: "20px", right: "20px", zIndex: 1050 }}
-        onClick={() => setShowModal(true)}
-      >
+      <Button variant="success" className="position-fixed" size="lg" style={{ bottom: "20px", right: "20px", zIndex: 1050 }} onClick={() => setShowModal(true)}>
         + Nova Ordem
       </Button>
 

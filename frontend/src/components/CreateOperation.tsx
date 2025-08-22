@@ -10,13 +10,7 @@ type CreateNewOperationProps = {
   onCreateSuccess: (newOperation: Operation) => void;
 };
 
-export default function CreateNewOperation({
-  orderId,
-  orderNumber,
-  show,
-  onClose,
-  onCreateSuccess,
-}: CreateNewOperationProps) {
+export default function CreateNewOperation({ orderId, orderNumber, show, onClose, onCreateSuccess }: CreateNewOperationProps) {
   const [operation_code, setOperationCode] = useState<string>("");
   const [selectedMachineIdStr, setSelectedMachineIdStr] = useState<string>(""); // "" = no selection, "NONE" = explicit none, otherwise numeric id string
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -153,7 +147,7 @@ export default function CreateNewOperation({
 
   // sync visible input when selection changes (only by id or NONE)
   useEffect(() => {
-    if (selectedMachineIdStr === "" ) {
+    if (selectedMachineIdStr === "") {
       setSearchText("");
       setHighlightIndex(-1);
       return;
@@ -303,13 +297,7 @@ export default function CreateNewOperation({
               Código <span className="text-danger">*</span>
             </Form.Label>
             <Col sm={8}>
-              <Form.Control
-                type="text"
-                value={operation_code}
-                onChange={(e) => setOperationCode(e.target.value)}
-                isInvalid={codeInvalid}
-                disabled={loading}
-              />
+              <Form.Control type="text" value={operation_code} onChange={(e) => setOperationCode(e.target.value)} isInvalid={codeInvalid} disabled={loading} />
               <Form.Control.Feedback type="invalid">Código é obrigatório.</Form.Control.Feedback>
             </Col>
           </Form.Group>
@@ -340,7 +328,7 @@ export default function CreateNewOperation({
                     <Button
                       variant="outline-secondary"
                       onClick={() => {
-                        setOpen(v => !v);
+                        setOpen((v) => !v);
                         if (!open && selectedMachineIdStr) {
                           if (selectedMachineIdStr === "NONE") setSearchText("Nenhuma");
                           else {
@@ -376,36 +364,32 @@ export default function CreateNewOperation({
                         <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Nenhuma</div>
                       </li>
 
-                      {filteredMachines.length === 0 ? (
-                        null
-                      ) : (
-                        filteredMachines.map((m, idx) => {
-                          const label = labelFor(m);
-                          const listIndex = idx + 1; // offset by 1 because "Nenhuma" is first
-                          const key = String(m.id ?? idx);
-                          const isHighlighted = listIndex === highlightIndex;
-                          const isSelected = String(m.id) === selectedMachineIdStr;
-                          return (
-                            <li
-                              key={key}
-                              role="option"
-                              aria-selected={isSelected}
-                              className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
-                              onMouseEnter={() => setHighlightIndex(listIndex)}
-                              onMouseDown={(ev) => {
-                                ev.preventDefault();
-                                onSelectMachine(m);
-                              }}
-                              style={{ cursor: "pointer" }}
-                            >
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
-                            </li>
-                          );
-                        })
-                      )}
-                      {filteredMachines.length === 0 && (
-                        <li className="list-group-item text-muted">Nenhuma máquina corresponde à pesquisa.</li>
-                      )}
+                      {filteredMachines.length === 0
+                        ? null
+                        : filteredMachines.map((m, idx) => {
+                            const label = labelFor(m);
+                            const listIndex = idx + 1; // offset by 1 because "Nenhuma" is first
+                            const key = String(m.id ?? idx);
+                            const isHighlighted = listIndex === highlightIndex;
+                            const isSelected = String(m.id) === selectedMachineIdStr;
+                            return (
+                              <li
+                                key={key}
+                                role="option"
+                                aria-selected={isSelected}
+                                className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
+                                onMouseEnter={() => setHighlightIndex(listIndex)}
+                                onMouseDown={(ev) => {
+                                  ev.preventDefault();
+                                  onSelectMachine(m);
+                                }}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+                              </li>
+                            );
+                          })}
+                      {filteredMachines.length === 0 && <li className="list-group-item text-muted">Nenhuma máquina corresponde à pesquisa.</li>}
                     </ul>
                   )}
                 </div>
