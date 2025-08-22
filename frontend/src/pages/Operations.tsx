@@ -276,6 +276,7 @@ export default function OperationDetail() {
                           ? "danger"
                           : "success"
                       }
+                      animated={true}
                       style={{ height: "1.8rem" }}
                     />
                     {/* Label overlay */}

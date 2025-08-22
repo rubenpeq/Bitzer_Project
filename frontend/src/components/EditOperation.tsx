@@ -149,7 +149,7 @@ export default function EditOperationModal({
                   <option value="">Nenhuma</option>
                   {machines.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.machine_location} — {m.machine_id}
+                      {m.machine_location} — {m.description}
                     </option>
                   ))}
                 </Form.Select>
