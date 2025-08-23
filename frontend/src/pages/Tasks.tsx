@@ -208,7 +208,7 @@ export default function TaskDetail() {
           { key: "operator", label: "Operador", value: task.operator ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
-            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(key, label, value === "--:--:--" ? "" : value)}>
+            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(key, label === "Fim" || label === "Início" ? "Data/Tempo" : label, value === "--:--:--" ? "" : value)}>
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value}</Card.Text>
             </Card>
