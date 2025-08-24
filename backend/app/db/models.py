@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Enum,
     Boolean,
+    func,
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -38,6 +39,7 @@ class OrderDB(Base):
 
     num_pieces = Column(Integer, nullable=False)
 
+    # relationships
     operations = relationship("OperationDB", back_populates="order")
 
 
@@ -51,9 +53,25 @@ class MachineDB(Base):
     machine_type = Column(Enum(MachineType), nullable=False)
 
     active = Column(Boolean, nullable=False, default=True)
-
+    
+    # relationships
     operations = relationship("OperationDB", back_populates="machine")
+    
+class UserDB(Base):
+    __tablename__ = "users"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bitzer_id = Column(Integer, unique=True, nullable=True)
+    name = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+    is_admin = Column(Boolean, nullable=False, default=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # relationships
+    tasks = relationship("TaskDB", back_populates="operator_user")
 
 class OperationDB(Base):
     __tablename__ = "operationsdb"
@@ -63,6 +81,7 @@ class OperationDB(Base):
     operation_code = Column(String, nullable=False)
     machine_id = Column(Integer, ForeignKey("machinesdb.id"), nullable=True)
 
+    # relationships
     order = relationship("OrderDB", back_populates="operations")
     machine = relationship("MachineDB", back_populates="operations")
     tasks = relationship("TaskDB", back_populates="operation")
@@ -74,7 +93,9 @@ class TaskDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     operation_id = Column(Integer, ForeignKey("operationsdb.id"), nullable=False)
     process_type = Column(Enum(ProcessType), nullable=False)
-    operator = Column(String, nullable=True)
+
+    operator_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    operator_bitzer_id = Column(Integer, nullable=True)     # snapshot of the bitzer_id at creation
 
     # timezone-aware instants for tasks
     start_at = Column(DateTime(timezone=True), nullable=True)
@@ -86,4 +107,6 @@ class TaskDB(Base):
     good_pieces = Column(Integer, nullable=True)
     bad_pieces = Column(Integer, nullable=True)
 
+    # relationships
+    operator_user = relationship("UserDB", back_populates="tasks")
     operation = relationship("OperationDB", back_populates="tasks")

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator
 import datetime
 from typing import List, Optional
 import enum
@@ -26,8 +26,10 @@ class MachineBase(BaseModel):
     machine_type: MachineType
     active: Optional[bool] = True
 
+
 class MachineCreate(MachineBase):
     pass
+
 
 class MachineUpdate(BaseModel):
     machine_id: Optional[str] = None
@@ -36,10 +38,11 @@ class MachineUpdate(BaseModel):
     machine_type: Optional[MachineType] = None
     active: Optional[bool] = None
 
+
 class Machine(MachineBase):
     id: int
-    class Config:
-        from_attributes = True
+
+    model_config = {"from_attributes": True}
 
 
 # -------------------------------
@@ -59,16 +62,16 @@ class TaskBase(BaseModel):
     bad_pieces: Optional[int] = None
     operator: Optional[str] = None
 
-class TaskCreate(TaskBase):
-    pass
 
-    @model_validator(mode="after")
-    def check_times(cls, values):
-        start = values.start_at
-        end = values.end_at
-        if start and end and end < start:
+class TaskCreate(TaskBase):
+    @field_validator("end_at")
+    @classmethod
+    def check_times(cls, end_at, values):
+        start_at = values.get("start_at")
+        if start_at and end_at and end_at < start_at:
             raise ValueError("Uma tarefa não pode acabar antes do seu inicio.")
-        return values
+        return end_at
+
 
 class TaskUpdate(BaseModel):
     process_type: Optional[ProcessType] = None
@@ -84,20 +87,21 @@ class TaskUpdate(BaseModel):
     good_pieces: Optional[int] = None
     bad_pieces: Optional[int] = None
     operator: Optional[str] = None
-    
-    @model_validator(mode="after")
-    def check_times(cls, values):
-        start = values.start_at
-        end = values.end_at
-        if start and end and end < start:
+
+    @field_validator("end_at")
+    @classmethod
+    def check_times(cls, end_at, values):
+        start_at = values.get("start_at")
+        if start_at and end_at and end_at < start_at:
             raise ValueError("Uma tarefa não pode acabar antes do seu inicio.")
-        return values
+        return end_at
+
 
 class Task(TaskBase):
     id: int
     operation_id: int
-    class Config:
-        from_attributes = True
+
+    model_config = {"from_attributes": True}
 
 
 # -------------------------------
@@ -108,20 +112,23 @@ class OperationBase(BaseModel):
     operation_code: str
     machine_id: Optional[int] = None
 
+
 class OperationCreate(OperationBase):
     pass
+
 
 class OperationUpdate(BaseModel):
     order_id: Optional[int] = None
     operation_code: Optional[str] = None
     machine_id: Optional[int] = None
 
+
 class Operation(OperationBase):
     id: int
     tasks: List["Task"] = []
     machine: Optional["Machine"] = None  # relationship
-    class Config:
-        from_attributes = True
+
+    model_config = {"from_attributes": True}
 
 
 # -------------------------------
@@ -133,8 +140,10 @@ class OrderBase(BaseModel):
     end_date: Optional[datetime.date]
     num_pieces: int
 
+
 class OrderCreate(OrderBase):
     order_number: int
+
 
 class OrderUpdate(BaseModel):
     material_number: Optional[int] = None
@@ -143,9 +152,19 @@ class OrderUpdate(BaseModel):
     num_pieces: Optional[int] = None
     order_number: Optional[int] = None
 
+
 class Order(OrderBase):
     id: int
     order_number: int
     operations: List["Operation"] = []
-    class Config:
-        from_attributes = True
+
+    model_config = {"from_attributes": True}
+
+
+# -------------------------------
+# Resolve Forward References
+# -------------------------------
+Operation.model_rebuild()
+Order.model_rebuild()
+Task.model_rebuild()
+Machine.model_rebuild()
