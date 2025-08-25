@@ -76,8 +76,6 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     process_type: Optional[ProcessType] = None
     date: Optional[datetime.date] = None
-    start_time: Optional[datetime.time] = None
-    end_time: Optional[datetime.time] = None
 
     start_at: Optional[datetime.datetime] = None
     end_at: Optional[datetime.datetime] = None
