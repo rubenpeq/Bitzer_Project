@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Enum,
     Boolean,
+    Text,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -106,6 +107,8 @@ class TaskDB(Base):
 
     good_pieces = Column(Integer, nullable=True)
     bad_pieces = Column(Integer, nullable=True)
+    
+    notes = Column(Text, nullable=True)
 
     # relationships
     operator_user = relationship("UserDB", back_populates="tasks")

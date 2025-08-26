@@ -1,6 +1,6 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, constr
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Annotated
 import enum
 
 
@@ -51,7 +51,7 @@ class Machine(MachineBase):
 class TaskBase(BaseModel):
     process_type: ProcessType
 
-    # timezone-aware instants (send/receive ISO8601 with offset, e.g. "2025-03-01T08:15:00+00:00")
+    # timezone-aware instants (send/receive ISO8601 with offset)
     start_at: Optional[datetime.datetime] = None
     end_at: Optional[datetime.datetime] = None
 
@@ -60,7 +60,13 @@ class TaskBase(BaseModel):
 
     good_pieces: Optional[int] = None
     bad_pieces: Optional[int] = None
-    operator: Optional[str] = None
+
+    # foreign keys and snapshot fields
+    operator_user_id: Optional[int] = None
+    operator_bitzer_id: Optional[int] = None
+
+    # notes about the task (max 1000 characters)
+    notes: Annotated[Optional[str], constr(max_length=1000)] = None
 
 
 class TaskCreate(TaskBase):
@@ -75,7 +81,6 @@ class TaskCreate(TaskBase):
 
 class TaskUpdate(BaseModel):
     process_type: Optional[ProcessType] = None
-    date: Optional[datetime.date] = None
 
     start_at: Optional[datetime.datetime] = None
     end_at: Optional[datetime.datetime] = None
@@ -84,7 +89,9 @@ class TaskUpdate(BaseModel):
 
     good_pieces: Optional[int] = None
     bad_pieces: Optional[int] = None
-    operator: Optional[str] = None
+    operator_user_id: Optional[int] = None
+    operator_bitzer_id: Optional[int] = None
+    notes: Annotated[Optional[str], constr(max_length=1000)] = None
 
     @field_validator("end_at")
     @classmethod
@@ -124,7 +131,7 @@ class OperationUpdate(BaseModel):
 class Operation(OperationBase):
     id: int
     tasks: List["Task"] = []
-    machine: Optional["Machine"] = None  # relationship
+    machine: Optional["Machine"] = None
 
     model_config = {"from_attributes": True}
 
