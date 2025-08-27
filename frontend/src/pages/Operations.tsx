@@ -19,7 +19,7 @@ export default function OperationDetail() {
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Task | "operator";
+    key: keyof Task;
     direction: "asc" | "desc";
   } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,6 @@ export default function OperationDetail() {
     try {
       const res = await fetch(`${API_URL}/operations/${opId}/pieces`);
       if (!res.ok) {
-        // clear or keep existing depending on your preference; here we'll clear
         setPiecesSummary(null);
         return;
       }
@@ -129,9 +128,11 @@ export default function OperationDetail() {
       tasks.filter(
         (t) =>
           contains(t.process_type) ||
-          contains(t.operator) ||
-          contains(t.start_at) || // new
-          contains(t.end_at)
+          contains(t.operator_bitzer_id) ||
+          contains(t.operator_user_id) ||
+          contains(t.start_at) ||
+          contains(t.end_at) ||
+          contains(t.notes)
       )
     );
   }, [searchTerm, tasks]);
@@ -139,7 +140,7 @@ export default function OperationDetail() {
   // -------------------
   // Table headers
   // -------------------
-  const taskHeaders: { key: keyof Task | "operator"; label: string }[] = [
+  const taskHeaders: { key: keyof Task; label: string }[] = [
     { key: "process_type", label: "Tipo de Processo" },
     { key: "start_at", label: "Início" },
     { key: "end_at", label: "Fim" },
@@ -147,7 +148,7 @@ export default function OperationDetail() {
     { key: "num_machines", label: "Máquinas" },
     { key: "good_pieces", label: "Peças Boas" },
     { key: "bad_pieces", label: "Peças Defetivas" },
-    { key: "operator", label: "Operador" },
+    { key: "operator_bitzer_id", label: "Operador" },
   ];
 
   const sortedTasks = useMemo(() => {
@@ -164,7 +165,7 @@ export default function OperationDetail() {
     });
   }, [filteredTasks, sortConfig]);
 
-  const handleSort = (key: keyof Task | "operator") => {
+  const handleSort = (key: keyof Task) => {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig?.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
@@ -229,31 +230,11 @@ export default function OperationDetail() {
   // Header items: order number & machine type are informational only (not editable here).
   // the progress card is shown as a small card in the header row
   const headerItems = [
-    {
-      key: "order_number",
-      label: "Nº Ordem",
-      value: displayOrderNumber ?? operation.order_id,
-      editable: false,
-    },
-    {
-      key: "operation_code",
-      label: "Código Operação",
-      value: operation.operation_code,
-      editable: true,
-    },
-    {
-      key: "machine_type",
-      label: "Tipo Máquina",
-      value: operation.machine?.machine_type ?? "—",
-      editable: false,
-    },
-    {
-      key: "machine_location",
-      label: "Cen. Trabalho",
-      value: operation.machine?.machine_location ?? "—",
-      editable: true,
-    },
-    { key: "total_pieces", label: "Progresso", value: null, editable: false },
+    { key: "order_number", label: "Nº Ordem", value: displayOrderNumber ?? operation.order_id, editable: false },
+    { key: "operation_code", label: "Código Operação", value: operation.operation_code, editable: true },
+    { key: "machine_type", label: "Tipo Máquina", value: operation.machine?.machine_type ?? "—", editable: false },
+    { key: "machine_location", label: "Cen. Trabalho", value: operation.machine?.machine_location ?? "—", editable: true },
+    { key: "total_pieces", label: "Progresso", value: null, editable: false }
   ] as const;
 
   return (
@@ -341,7 +322,7 @@ export default function OperationDetail() {
       />
 
       {/* Search bar */}
-      <Form.Control type="search" placeholder="Pesquisar tarefas... (tipo de processo, data ou operador)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
+      <Form.Control type="search" placeholder="Pesquisar tarefas... (tipo de processo, id do operador, notas, data)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
 
       {/* Tasks table */}
       {sortedTasks.length === 0 ? (
@@ -369,7 +350,7 @@ export default function OperationDetail() {
                   <td>{task.num_machines ?? "-"}</td>
                   <td>{task.good_pieces ?? "-"}</td>
                   <td>{task.bad_pieces ?? "-"}</td>
-                  <td>{task.operator ?? "-"}</td>
+                  <td>{task.operator_user?.name ?? "-"}</td>
                 </tr>
               ))}
             </tbody>

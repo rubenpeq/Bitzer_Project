@@ -19,6 +19,20 @@ export type Machine = {
 };
 
 // -------------------------------
+// User type
+// -------------------------------
+export type User = {
+  id: number;
+  bitzer_id?: number | null;
+  name: string;
+  active?: boolean;
+  is_admin?: boolean;
+  // timezone-aware ISO datetime strings
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+// -------------------------------
 // Operation type
 // -------------------------------
 export type Operation = {
@@ -50,6 +64,7 @@ export type Task = {
   // Operator references
   operator_user_id?: number | null; // references UserDB.id
   operator_bitzer_id?: number | null; // snapshot of Bitzer ID
+  operator_user?: User | null; // optional expanded user object when returned by backend
 
   // Timezone-aware datetime strings (ISO8601 with offset)
   start_at?: string | null; // e.g. "2025-08-22T08:30:00+01:00"
