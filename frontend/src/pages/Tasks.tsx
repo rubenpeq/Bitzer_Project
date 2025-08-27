@@ -205,7 +205,7 @@ export default function TaskDetail() {
           { key: "process_type", label: "Tipo de Processo", value: processedLabel },
           { key: "start_at", label: "Início", value: formatLocalTime(task.start_at) },
           { key: "end_at", label: "Fim", value: formatLocalTime(task.end_at) },
-          { key: "operator", label: "Operador", value: task.operator ?? "Sem Operador" },
+          { key: "operator", label: "Operador", value: task.operator_user?.name ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
             <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(key, label === "Fim" || label === "Início" ? "Data/Tempo" : label, value === "--:--:--" ? "" : value)}>
