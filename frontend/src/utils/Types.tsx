@@ -15,7 +15,7 @@ export type Machine = {
   description: string;
   machine_id: string;
   machine_type: MachineType;
-  active?: boolean; // NEW: optional flag to filter selectable machines
+  active?: boolean; // optional flag to filter selectable machines
 };
 
 // -------------------------------
@@ -24,7 +24,7 @@ export type Machine = {
 export type Operation = {
   id: number;
   operation_code: string;
-  order_id: number; // now references order by ID
+  order_id: number; // references order by ID
   machine_id?: number | null; // references machine by ID (nullable)
   machine?: Machine; // optional expanded machine details
   tasks?: Task[]; // operations include tasks
@@ -45,27 +45,37 @@ export type OperationUpdate = {
 export type Task = {
   id: number;
   operation_id: number;
-  operator: string;
   process_type: ProcessType;
-  // NEW: timezone-aware datetime strings (ISO8601 with offset)
+
+  // Operator references
+  operator_user_id?: number | null; // references UserDB.id
+  operator_bitzer_id?: number | null; // snapshot of Bitzer ID
+
+  // Timezone-aware datetime strings (ISO8601 with offset)
   start_at?: string | null; // e.g. "2025-08-22T08:30:00+01:00"
   end_at?: string | null;
+
   num_benches?: number | null;
   num_machines?: number | null;
   good_pieces?: number | null;
   bad_pieces?: number | null;
+
+  // Notes / operator observations (max 1000 chars)
+  notes?: string | null;
 };
 
 // Task payload used when creating a task from the UI
 export type TaskCreate = {
   process_type: ProcessType;
-  operator: string;
+  operator_user_id?: number;
+  operator_bitzer_id?: number;
   start_at?: string;
   end_at?: string;
   num_benches?: number;
   num_machines?: number;
   good_pieces?: number;
   bad_pieces?: number;
+  notes?: string;
 };
 
 // -------------------------------
