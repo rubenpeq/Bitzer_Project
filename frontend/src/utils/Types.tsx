@@ -128,9 +128,40 @@ export const processTypeLabels: Record<string, string> = {
 // -------------------------------
 // Helpers
 // -------------------------------
-export function formatLocalTime(date = new Date()): string {
+
+/**
+ * Format a date string based on the desired output type.
+ * 
+ * @param input - A date or datetime string (ISO8601 recommended)
+ * @param mode - "date" | "datetime" | "time" | "time-seconds" (default: "datetime")
+ * @returns Formatted date/time string
+ */
+export function formatDateTime(
+  input: string | null | undefined,
+  mode: "date" | "datetime" | "time" | "time-seconds" = "datetime"
+): string {
+  if (!input) return "----";
+
+  const date = new Date(input);
+  if (isNaN(date.getTime())) return String(input); // fallback if invalid date
+
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
   const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
   const ss = String(date.getSeconds()).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+
+  switch (mode) {
+    case "date":
+      return `${yyyy}-${mm}-${dd}`;
+    case "time":
+      return `${hh}:${min}`;
+    case "time-seconds":
+      return `${hh}:${min}:${ss}`;
+    case "datetime":
+    default:
+      const isMidnight = hh === "00" && min === "00" && ss === "00";
+      return isMidnight ? `${yyyy}-${mm}-${dd}` : `${yyyy}-${mm}-${dd}, ${hh}:${min}`;
+  }
 }

@@ -2,16 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Button, Spinner, Alert, Row, Col, Card, Form } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-import { type Task, processTypeLabels } from "../utils/Types";
+import { type Task, formatDateTime, processTypeLabels } from "../utils/Types";
 import EditTask from "../components/EditTask";
-
-// Helper to format a local time string from ISO
-const formatLocalTime = (iso?: string | null) => {
-  if (!iso) return "--:--:--";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "--:--:--";
-  return d.toLocaleTimeString();
-};
 
 // Compute duration in seconds between start_at and end_at (or now if ongoing)
 const computeDurationSeconds = (task: Task) => {
@@ -203,8 +195,8 @@ export default function TaskDetail() {
       <Row className="mb-4 text-center justify-content-center gx-3">
         {[
           { key: "process_type", label: "Tipo de Processo", value: processedLabel },
-          { key: "start_at", label: "Início", value: formatLocalTime(task.start_at) },
-          { key: "end_at", label: "Fim", value: formatLocalTime(task.end_at) },
+          { key: "start_at", label: "Início", value: formatDateTime(task.start_at) },
+          { key: "end_at", label: "Fim", value: formatDateTime(task.end_at) },
           { key: "operator", label: "Operador", value: task.operator_user?.name ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>

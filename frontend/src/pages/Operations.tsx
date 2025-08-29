@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { Table, Spinner, Alert, Button, Row, Col, Card, Form, ProgressBar } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
-import { processTypeLabels, type Operation, type Task } from "../utils/Types";
+import { formatDateTime, processTypeLabels, type Operation, type Task } from "../utils/Types";
 import CreateTask from "../components/CreateTask";
 import EditOperationModal from "../components/EditOperation";
 
@@ -129,10 +129,9 @@ export default function OperationDetail() {
         (t) =>
           contains(t.process_type) ||
           contains(t.operator_bitzer_id) ||
-          contains(t.operator_user_id) ||
+          contains(t.operator_user?.name) ||
           contains(t.start_at) ||
-          contains(t.end_at) ||
-          contains(t.notes)
+          contains(t.end_at)
       )
     );
   }, [searchTerm, tasks]);
@@ -322,7 +321,7 @@ export default function OperationDetail() {
       />
 
       {/* Search bar */}
-      <Form.Control type="search" placeholder="Pesquisar tarefas... (tipo de processo, id do operador, notas, data)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
+      <Form.Control type="search" placeholder="Pesquisar tarefas... (tipo de processo, nome/id do operador, data)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="mb-3" />
 
       {/* Tasks table */}
       {sortedTasks.length === 0 ? (
@@ -344,8 +343,8 @@ export default function OperationDetail() {
               {sortedTasks.map((task) => (
                 <tr key={task.id} onDoubleClick={() => handleRowDoubleClick(task.id)} style={{ cursor: "pointer" }}>
                   <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
-                  <td>{task.start_at ? new Date(task.start_at).toLocaleString() : "----"}</td>
-                  <td>{task.end_at ? new Date(task.end_at).toLocaleString() : "----"}</td>
+                  <td>{task.start_at ? formatDateTime(task.start_at) : "-"}</td>
+                  <td>{task.end_at ? formatDateTime(task.end_at) : "-"}</td>
                   <td>{task.num_benches ?? "-"}</td>
                   <td>{task.num_machines ?? "-"}</td>
                   <td>{task.good_pieces ?? "-"}</td>

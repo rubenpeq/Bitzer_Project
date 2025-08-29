@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Table, Form, Spinner, Alert, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import CreateNewOrder from "../components/CreateOrder";
-import type { Order } from "../utils/Types";
+import { formatDateTime, type Order } from "../utils/Types";
 
 export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -138,8 +138,8 @@ export default function Home() {
                 <tr key={order.id ?? index} onDoubleClick={() => handleRowDoubleClick(order.order_number)} style={{ cursor: "pointer" }}>
                   <td>{order.order_number}</td>
                   <td>{order.material_number}</td>
-                  <td>{order.start_date ?? "-"}</td>
-                  <td>{order.end_date ?? "-"}</td>
+                  <td>{order.start_date ? formatDateTime(order.start_date, "date") : "-"}</td>
+                  <td>{order.end_date ? formatDateTime(order.end_date, "date") : "-"}</td>
                   <td>{order.num_pieces}</td>
                 </tr>
               ))}
