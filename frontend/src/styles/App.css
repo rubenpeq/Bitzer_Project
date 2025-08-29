@@ -1,20 +1,72 @@
+/* App-wide */
 body {
   margin: 0;
   min-height: 100vh;
   background: black;
+  color: white;
 }
 
-#root, .App {
-  background: transparent !important;
-}
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-}
-
+/* keep table headers sticky */
 .sticky-table thead th {
   position: sticky;
   top: 0;
   z-index: 2; /* stay above table rows */
+}
+
+/* ---------- Navbar right-side controls ---------- */
+/* container used by Navbar component (so absolute children are positioned relative to it) */
+.app-navbar-container {
+  position: relative;
+}
+
+/* right side controls pinned to the right and vertically centered */
+.app-navbar-right {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2000; /* keep dropdown over other content */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Admin button appearance when variant="link" (force white text) */
+.app-admin-button,
+.app-login-button {
+  color: #fff !important;
+  padding: 0.375rem 0.75rem;
+  text-decoration: none !important;
+  font-size: 0.95rem;
+}
+
+/* Make sure NavDropdown toggle text is white */
+.app-user-title {
+  color: #fff;
+}
+
+/* Ensure the dropdown toggle text (Bootstrap's .dropdown-toggle) also inherits white color */
+.app-user-dropdown .dropdown-toggle {
+  color: #fff !important;
+}
+
+/* Ensure the dropdown menu appears above other elements (Popper/bs may set z-index, but ensure container stacking) */
+.app-user-dropdown-wrap {
+  position: relative;
+  z-index: 2001;
+}
+
+/* Optional: slightly reduce dropdown item contrast for dark background (keeps menuVariant="dark" consistent) */
+.app-user-dropdown .dropdown-menu {
+  background: #1f2933; /* dark slate */
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* small responsive tweak: on very narrow screens move right-area into normal flow (prevents overlap) */
+@media (max-width: 480px) {
+  .app-navbar-right {
+    position: static;
+    transform: none;
+    margin-left: auto;
+  }
 }

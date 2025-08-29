@@ -344,8 +344,8 @@ export default function OperationDetail() {
               {sortedTasks.map((task) => (
                 <tr key={task.id} onDoubleClick={() => handleRowDoubleClick(task.id)} style={{ cursor: "pointer" }}>
                   <td>{processTypeLabels[task.process_type] ?? task.process_type}</td>
-                  <td>{task.start_at ? new Date(task.start_at).toLocaleString() : "--:--"}</td>
-                  <td>{task.end_at ? new Date(task.end_at).toLocaleString() : "--:--"}</td>
+                  <td>{task.start_at ? new Date(task.start_at).toLocaleString() : "----"}</td>
+                  <td>{task.end_at ? new Date(task.end_at).toLocaleString() : "----"}</td>
                   <td>{task.num_benches ?? "-"}</td>
                   <td>{task.num_machines ?? "-"}</td>
                   <td>{task.good_pieces ?? "-"}</td>
