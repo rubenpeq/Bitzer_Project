@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
+import { useEffect, useRef, useState } from "react";
+import { Modal, Button, Form, Row, Col, Alert, Spinner, InputGroup } from "react-bootstrap";
 import type { Task, TaskCreate } from "../utils/Types";
 
-// Allowed process types (string literals)
 const VALID_PROCESS_TYPES = ["PREPARATION", "QUALITY_CONTROL", "PROCESSING"] as const;
 type ProcessTypeStr = (typeof VALID_PROCESS_TYPES)[number];
 
@@ -13,55 +12,219 @@ type CreateTaskProps = {
   onCreateSuccess: (newTask: Task) => void;
 };
 
-// UI form shape
 type TaskForm = {
   process_type: string;
-  operator?: string;
+  operator_user_id?: number | null;
   start_at_date?: string;
   start_at_time?: string;
   end_at_date?: string;
   end_at_time?: string;
   good_pieces?: number | "";
   bad_pieces?: number | "";
+  num_benches?: number | "";
+  num_machines?: number | "";
+  notes?: string;
 };
+
+type UserOption = { id: number; name: string; bitzer_id?: number | null };
 
 export default function CreateTask({ operationId, show, onClose, onCreateSuccess }: CreateTaskProps) {
   const todayDate = new Date().toISOString().slice(0, 10);
+  const API_URL = import.meta.env.VITE_FASTAPI_URL;
 
   const [task, setTask] = useState<TaskForm>({
     process_type: "",
-    operator: "",
+    operator_user_id: undefined,
     start_at_date: todayDate,
     start_at_time: "",
     end_at_date: todayDate,
     end_at_time: "",
     good_pieces: "",
     bad_pieces: "",
+    num_benches: "",
+    num_machines: "",
+    notes: "",
   });
 
   const [showOptionals, setShowOptionals] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_FASTAPI_URL;
+  // users + combobox states
+  const [users, setUsers] = useState<UserOption[] | null>(null);
+  const [open, setOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [selectedUserId, setSelectedUserId] = useState<number | null | undefined>(undefined);
+
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (show) {
       setTask({
         process_type: "",
-        operator: "",
+        operator_user_id: undefined,
         start_at_date: todayDate,
         start_at_time: "",
         end_at_date: todayDate,
         end_at_time: "",
         good_pieces: "",
         bad_pieces: "",
+        num_benches: "",
+        num_machines: "",
+        notes: "",
       });
       setShowOptionals(false);
       setError(null);
       setLoading(false);
+      setSearchText("");
+      setOpen(false);
+      setHighlightIndex(-1);
+      setSelectedUserId(undefined);
     }
   }, [show, todayDate]);
+
+  // load active users when modal opens
+  useEffect(() => {
+    if (!show) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/users?active=true`);
+        if (!res.ok) throw new Error("Falha ao carregar utilizadores");
+        const json = await res.json();
+        if (cancelled) return;
+        setUsers((json ?? []).map((u: any) => ({ id: u.id, name: u.name, bitzer_id: u.bitzer_id ?? null })));
+      } catch {
+        if (!cancelled) setUsers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [API_URL, show]);
+
+  // label for each user
+  const labelFor = (u: UserOption) => `${u.bitzer_id ? `${u.bitzer_id} — ` : ""}${u.name}`;
+
+  // filtered users from searchText
+  const filteredUsers = ((): UserOption[] => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return users ?? [];
+    if (!users) return [];
+    return users.filter((u) => {
+      const name = (u.name ?? "").toLowerCase();
+      const bid = String(u.bitzer_id ?? "").toLowerCase();
+      return name.includes(q) || bid.includes(q);
+    });
+  })();
+
+  // when user types clear selection
+  const onInputChange = (value: string) => {
+    setSearchText(value);
+    if (selectedUserId !== undefined && selectedUserId !== null) setSelectedUserId(undefined);
+    setOpen(true);
+    setHighlightIndex(0);
+  };
+
+  // keyboard navigation
+  const totalListCount = (filteredUsers?.length ?? 0) + 1; // +1 for Nenhuma
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setOpen(true);
+      setHighlightIndex(0);
+      e.preventDefault();
+      return;
+    }
+    if (!open) return;
+
+    if (e.key === "ArrowDown") {
+      setHighlightIndex((i) => Math.min(totalListCount - 1, Math.max(0, i + 1)));
+      e.preventDefault();
+    } else if (e.key === "ArrowUp") {
+      setHighlightIndex((i) => Math.max(0, i - 1));
+      e.preventDefault();
+    } else if (e.key === "Enter") {
+      if (highlightIndex >= 0 && highlightIndex < totalListCount) {
+        if (highlightIndex === 0) {
+          // Nenhuma
+          setSelectedUserId(null);
+          setSearchText("Nenhuma");
+        } else {
+          const chosen = filteredUsers[highlightIndex - 1];
+          setSelectedUserId(Number(chosen.id));
+          setSearchText(labelFor(chosen));
+        }
+        setOpen(false);
+      }
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      // restore selected or clear
+      if (selectedUserId) {
+        const sel = users?.find((u) => Number(u.id) === Number(selectedUserId));
+        if (sel) setSearchText(labelFor(sel));
+      } else {
+        setSearchText("");
+      }
+      setHighlightIndex(-1);
+    }
+  };
+
+  // click outside: accept exact match or clear
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        if (!users) {
+          setSearchText("");
+          setSelectedUserId(undefined);
+          setHighlightIndex(-1);
+          return;
+        }
+        const sel = users.find((u) => String(u.id) === String(selectedUserId));
+        if (!sel) {
+          const exact = users.find((u) => labelFor(u).trim() === searchText.trim());
+          if (exact) {
+            setSelectedUserId(Number(exact.id));
+            setSearchText(labelFor(exact));
+          } else {
+            if (searchText.trim() === "Nenhuma") {
+              setSelectedUserId(null);
+            } else {
+              setSearchText("");
+              setSelectedUserId(undefined);
+            }
+          }
+        } else {
+          if (searchText.trim() !== labelFor(sel).trim()) {
+            setSelectedUserId(undefined);
+            setSearchText("");
+          } else {
+            setSearchText(labelFor(sel));
+          }
+        }
+        setHighlightIndex(-1);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [users, searchText, selectedUserId]);
+
+  const onSelectNone = () => {
+    setSelectedUserId(null);
+    setSearchText("Nenhuma");
+    setOpen(false);
+    setHighlightIndex(-1);
+  };
+
+  const onSelectUser = (u: UserOption) => {
+    setSelectedUserId(Number(u.id));
+    setSearchText(labelFor(u));
+    setOpen(false);
+    setHighlightIndex(-1);
+  };
 
   const localPartsToIso = (date: string, time: string) => {
     if (!date || !time) return null;
@@ -74,16 +237,28 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
     }
 
     const payload: any = { process_type: task.process_type as ProcessTypeStr };
-    if (task.operator?.trim()) payload.operator = task.operator.trim();
+
+    if (selectedUserId !== undefined && selectedUserId !== null) {
+      payload.operator_user_id = selectedUserId;
+      const sel = users?.find((u) => Number(u.id) === Number(selectedUserId));
+      payload.operator_bitzer_id = sel?.bitzer_id ?? null;
+    } else if (selectedUserId === null) {
+      // explicitly clearing operator
+      payload.operator_user_id = null;
+      payload.operator_bitzer_id = null;
+    }
 
     const startIso = task.start_at_date && task.start_at_time ? localPartsToIso(task.start_at_date, task.start_at_time) : null;
     const endIso = task.end_at_date && task.end_at_time ? localPartsToIso(task.end_at_date, task.end_at_time) : null;
-
     if (startIso) payload.start_at = startIso;
     if (endIso) payload.end_at = endIso;
 
     if (task.good_pieces !== "" && task.good_pieces !== undefined) payload.good_pieces = Number(task.good_pieces);
     if (task.bad_pieces !== "" && task.bad_pieces !== undefined) payload.bad_pieces = Number(task.bad_pieces);
+    if (task.num_benches !== "" && task.num_benches !== undefined) payload.num_benches = Number(task.num_benches);
+    if (task.num_machines !== "" && task.num_machines !== undefined) payload.num_machines = Number(task.num_machines);
+
+    if (task.notes && task.notes.trim() !== "") payload.notes = task.notes.trim();
 
     return payload as TaskCreate;
   };
@@ -94,7 +269,6 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
       setError("O campo 'Tipo de Processo' é obrigatório.");
       return;
     }
-
     setLoading(true);
     try {
       const payload = buildPayload();
@@ -103,7 +277,6 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         let msg = "Erro ao criar tarefa.";
         try {
@@ -114,7 +287,6 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
         }
         throw new Error(msg);
       }
-
       const createdTask: Task = await res.json();
       onCreateSuccess(createdTask);
       onClose();
@@ -135,15 +307,97 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
         <Form>
           <Form.Group className="mb-3">
             <Form.Label>Tipo de Processo</Form.Label>
-            <Form.Select value={task.process_type} onChange={(e) => setTask((prev) => ({ ...prev, process_type: e.target.value }))}>
+            <Form.Select value={task.process_type} onChange={(e) => setTask((p) => ({ ...p, process_type: e.target.value }))}>
               <option value="">Selecione um tipo de processo</option>
               <option value="PREPARATION">Preparação de Máquina</option>
               <option value="QUALITY_CONTROL">Controlo de Qualidade</option>
               <option value="PROCESSING">Processamento</option>
             </Form.Select>
+          </Form.Group>
 
-            <Form.Label className="mt-3">Operador</Form.Label>
-            <Form.Control type="text" placeholder="Nome do operador" value={task.operator ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, operator: e.target.value }))} />
+          {/* Operator combobox (search + select) */}
+          <Form.Group className="mb-3">
+            <Form.Label>Operador</Form.Label>
+            {users === null ? (
+              <div>Carregando utilizadores...</div>
+            ) : (
+              <div ref={wrapperRef} className="position-relative">
+                <InputGroup>
+                  <input
+                    ref={inputRef}
+                    className="form-control"
+                    placeholder="Pesquisar por nome ou bitzer_id..."
+                    value={searchText}
+                    onChange={(e) => onInputChange(e.target.value)}
+                    onFocus={() => {
+                      setOpen(true);
+                      setHighlightIndex(0);
+                    }}
+                    onKeyDown={onInputKeyDown}
+                    aria-haspopup="listbox"
+                    aria-expanded={open}
+                  />
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => {
+                      setOpen((v) => !v);
+                      if (!open && selectedUserId !== undefined && selectedUserId !== null) {
+                        const sel = users.find((u) => String(u.id) === String(selectedUserId));
+                        if (sel) setSearchText(labelFor(sel));
+                      }
+                      setHighlightIndex(0);
+                    }}
+                  >
+                    {open ? "▴" : "▾"}
+                  </Button>
+                </InputGroup>
+
+                {open && (
+                  <ul role="listbox" className="list-group position-absolute w-100" style={{ zIndex: 1200, maxHeight: 260, overflowY: "auto" }}>
+                    <li
+                      key="none"
+                      role="option"
+                      aria-selected={selectedUserId === null && searchText === "Nenhuma"}
+                      className={"list-group-item list-group-item-action" + (highlightIndex === 0 ? " active" : "")}
+                      onMouseEnter={() => setHighlightIndex(0)}
+                      onMouseDown={(ev) => {
+                        ev.preventDefault();
+                        onSelectNone();
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Nenhuma
+                    </li>
+
+                    {filteredUsers.length === 0 ? (
+                      <li className="list-group-item text-muted">Nenhum utilizador corresponde à pesquisa.</li>
+                    ) : (
+                      filteredUsers.map((u, idx) => {
+                        const listIndex = idx + 1;
+                        const isHighlighted = listIndex === highlightIndex;
+                        const isSelected = String(u.id) === String(selectedUserId);
+                        return (
+                          <li
+                            key={u.id}
+                            role="option"
+                            aria-selected={isSelected}
+                            className={"list-group-item list-group-item-action" + (isHighlighted ? " active" : "")}
+                            onMouseEnter={() => setHighlightIndex(listIndex)}
+                            onMouseDown={(ev) => {
+                              ev.preventDefault();
+                              onSelectUser(u);
+                            }}
+                            style={{ cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                          >
+                            {labelFor(u)}
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
           </Form.Group>
 
           <div className="mb-2 d-flex justify-content-center">
@@ -155,36 +409,71 @@ export default function CreateTask({ operationId, show, onClose, onCreateSuccess
           {showOptionals && (
             <>
               <Row className="mb-3">
-                <Col>
-                  <Form.Label>Início</Form.Label>
-                  <Form.Control type="date" value={task.start_at_date ?? todayDate} onChange={(e) => setTask((prev) => ({ ...prev, start_at_date: e.target.value }))} />
-                  <Form.Control type="time" value={task.start_at_time ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, start_at_time: e.target.value }))} />
+                <Col md={6}>
+                  <Form.Label>Início (data)</Form.Label>
+                  <Form.Control type="date" value={task.start_at_date ?? todayDate} onChange={(e) => setTask((p) => ({ ...p, start_at_date: e.target.value }))} />
                 </Col>
-                <Col>
-                  <Form.Label>Fim</Form.Label>
-                  <Form.Control type="date" value={task.end_at_date ?? todayDate} onChange={(e) => setTask((prev) => ({ ...prev, end_at_date: e.target.value }))} />
-                  <Form.Control type="time" value={task.end_at_time ?? ""} onChange={(e) => setTask((prev) => ({ ...prev, end_at_time: e.target.value }))} />
+                <Col md={6}>
+                  <Form.Label>Início (hora)</Form.Label>
+                  <Form.Control type="time" value={task.start_at_time ?? ""} onChange={(e) => setTask((p) => ({ ...p, start_at_time: e.target.value }))} />
+                </Col>
+              </Row>
+
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Label>Fim (data)</Form.Label>
+                  <Form.Control type="date" value={task.end_at_date ?? todayDate} onChange={(e) => setTask((p) => ({ ...p, end_at_date: e.target.value }))} />
+                </Col>
+                <Col md={6}>
+                  <Form.Label>Fim (hora)</Form.Label>
+                  <Form.Control type="time" value={task.end_at_time ?? ""} onChange={(e) => setTask((p) => ({ ...p, end_at_time: e.target.value }))} />
                 </Col>
               </Row>
 
               <Row className="mb-2">
-                <Col>
+                <Col md={6}>
                   <Form.Label>Peças Boas</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min={0}
-                    value={task.good_pieces === "" ? "" : String(task.good_pieces)}
-                    onChange={(e) => setTask((prev) => ({ ...prev, good_pieces: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  />
+                  <InputGroup>
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, good_pieces: (p.good_pieces === "" || p.good_pieces === undefined) ? 0 : Math.max(0, Number(p.good_pieces) - 1) }))}>−</Button>
+                    <Form.Control type="number" min={0} value={task.good_pieces === "" ? "" : String(task.good_pieces)} onChange={(e) => setTask((p) => ({ ...p, good_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, good_pieces: (p.good_pieces === "" || p.good_pieces === undefined) ? 1 : Number(p.good_pieces) + 1 }))}>+</Button>
+                  </InputGroup>
                 </Col>
+
+                <Col md={6}>
+                  <Form.Label>Peças Defeituosas</Form.Label>
+                  <InputGroup>
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, bad_pieces: (p.bad_pieces === "" || p.bad_pieces === undefined) ? 0 : Math.max(0, Number(p.bad_pieces) - 1) }))}>−</Button>
+                    <Form.Control type="number" min={0} value={task.bad_pieces === "" ? "" : String(task.bad_pieces)} onChange={(e) => setTask((p) => ({ ...p, bad_pieces: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, bad_pieces: (p.bad_pieces === "" || p.bad_pieces === undefined) ? 1 : Number(p.bad_pieces) + 1 }))}>+</Button>
+                  </InputGroup>
+                </Col>
+              </Row>
+
+              <Row className="mb-2">
+                <Col md={6}>
+                  <Form.Label>Bancadas</Form.Label>
+                  <InputGroup>
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, num_benches: (p.num_benches === "" || p.num_benches === undefined) ? 0 : Math.max(0, Number(p.num_benches) - 1) }))}>−</Button>
+                    <Form.Control type="number" min={0} value={task.num_benches === "" ? "" : String(task.num_benches)} onChange={(e) => setTask((p) => ({ ...p, num_benches: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, num_benches: (p.num_benches === "" || p.num_benches === undefined) ? 1 : Number(p.num_benches) + 1 }))}>+</Button>
+                  </InputGroup>
+                </Col>
+
+                <Col md={6}>
+                  <Form.Label>Máquinas</Form.Label>
+                  <InputGroup>
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, num_machines: (p.num_machines === "" || p.num_machines === undefined) ? 0 : Math.max(0, Number(p.num_machines) - 1) }))}>−</Button>
+                    <Form.Control type="number" min={0} value={task.num_machines === "" ? "" : String(task.num_machines)} onChange={(e) => setTask((p) => ({ ...p, num_machines: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                    <Button variant="outline-secondary" onClick={() => setTask((p) => ({ ...p, num_machines: (p.num_machines === "" || p.num_machines === undefined) ? 1 : Number(p.num_machines) + 1 }))}>+</Button>
+                  </InputGroup>
+                </Col>
+              </Row>
+
+              <Row>
                 <Col>
-                  <Form.Label>Peças Ruins</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min={0}
-                    value={task.bad_pieces === "" ? "" : String(task.bad_pieces)}
-                    onChange={(e) => setTask((prev) => ({ ...prev, bad_pieces: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  />
+                  <Form.Label>Observações</Form.Label>
+                  <Form.Control as="textarea" rows={3} maxLength={1000} value={task.notes ?? ""} onChange={(e) => setTask((p) => ({ ...p, notes: e.target.value }))} placeholder="Notas do operador (máx. 1000 caracteres)" />
                 </Col>
               </Row>
             </>

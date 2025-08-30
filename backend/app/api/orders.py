@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 
 from db.database import SessionLocal
-from db.models import OrderDB, OperationDB, TaskDB, MachineDB
+from db.models import OrderDB, OperationDB, TaskDB, MachineDB, UserDB
 from db import schemas as s
 
 router = APIRouter()
@@ -170,6 +170,84 @@ def delete_machine(machine_id: int, db: Session = Depends(get_db)):
 
 
 # -----------------------
+# Users
+# -----------------------
+@router.get("/users", response_model=List[s.User], tags=["Users"], summary="List users (optionally only active)")
+def list_users(active: Optional[bool] = Query(None, description="If true, return only active users"), db: Session = Depends(get_db)):
+    q = db.query(UserDB)
+    if active is True:
+        q = q.filter(UserDB.active == True)
+    return q.all()
+
+
+@router.get("/users/{user_id}", response_model=s.User, tags=["Users"], summary="Get user by id")
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return u
+
+
+@router.post("/users", response_model=s.User, status_code=status.HTTP_201_CREATED, tags=["Users"], summary="Create user")
+def create_user(user_in: s.UserCreate, db: Session = Depends(get_db)):
+    data = user_in.model_dump(exclude_unset=True)
+    # check unique bitzer_id when provided
+    if data.get("bitzer_id") is not None:
+        exists = db.query(UserDB).filter(UserDB.bitzer_id == data["bitzer_id"]).first()
+        if exists:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="bitzer_id already in use")
+    new_u = UserDB(**data)
+    db.add(new_u)
+    db.commit()
+    db.refresh(new_u)
+    return new_u
+
+
+@router.patch("/users/{user_id}", response_model=s.User, tags=["Users"], summary="Partial update a user")
+def patch_user(user_id: int, user_in: s.UserUpdate, db: Session = Depends(get_db)):
+    u = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    data = user_in.model_dump(exclude_unset=True)
+    if "bitzer_id" in data:
+        new_bid = data["bitzer_id"]
+        if new_bid is not None and new_bid != u.bitzer_id:
+            conflict = db.query(UserDB).filter(UserDB.bitzer_id == new_bid).first()
+            if conflict:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="bitzer_id already in use")
+
+    for k, v in data.items():
+        # handle password if later hashed (currently stored as password_hash)
+        if k == "password":
+            # caller currently sends plain-text password; we are not doing hashing right now
+            # Future: hash here and write to password_hash
+            setattr(u, "password_hash", v)
+        else:
+            setattr(u, k, v)
+
+    db.commit()
+    db.refresh(u)
+    return u
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Users"], summary="Delete a user (fails if referenced by tasks)")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # prevent deleting users that are referenced by tasks
+    used = db.query(TaskDB).filter(TaskDB.operator_user_id == u.id).first()
+    if used:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is referenced by tasks; reassign or clear tasks first")
+
+    db.delete(u)
+    db.commit()
+    return None
+
+
+# -----------------------
 # Operations
 # -----------------------
 @router.get("/orders/{order_number}/operations", response_model=List[s.Operation], tags=["Operations"], summary="List operations for an order_number")
@@ -282,6 +360,7 @@ def delete_operation(operation_id: int, db: Session = Depends(get_db)):
     db.commit()
     return None
 
+
 @router.get(
     "/operations/{operation_id}/pieces",
     tags=["Operations"],
@@ -332,7 +411,20 @@ def create_task(operation_id: int, task_in: s.TaskCreate, db: Session = Depends(
     op = db.query(OperationDB).filter(OperationDB.id == operation_id).first()
     if not op:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Operation not found")
-    t = TaskDB(**task_in.model_dump(), operation_id=operation_id)
+
+    data = task_in.model_dump(exclude_unset=True)
+
+    # If operator_user_id provided, validate user exists and snapshot bitzer_id if not provided
+    if "operator_user_id" in data and data["operator_user_id"] is not None:
+        user = db.query(UserDB).filter(UserDB.id == data["operator_user_id"]).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Referenced operator user not found")
+        # snapshot bitzer_id if not provided
+        if "operator_bitzer_id" not in data or data.get("operator_bitzer_id") is None:
+            data["operator_bitzer_id"] = user.bitzer_id
+
+    # create TaskDB with operation_id forced
+    t = TaskDB(**data, operation_id=operation_id)
     db.add(t)
     db.commit()
     db.refresh(t)
@@ -345,6 +437,19 @@ def put_task(task_id: int, task_in: s.TaskUpdate, db: Session = Depends(get_db))
     if not t:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     data = task_in.model_dump(exclude_unset=True)
+
+    # If operator_user_id set and operator_bitzer_id not provided, snapshot user's bitzer_id
+    if "operator_user_id" in data:
+        if data["operator_user_id"] is None:
+            # clearing operator
+            data["operator_bitzer_id"] = None
+        else:
+            user = db.query(UserDB).filter(UserDB.id == data["operator_user_id"]).first()
+            if not user:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Referenced operator user not found")
+            if "operator_bitzer_id" not in data or data.get("operator_bitzer_id") is None:
+                data["operator_bitzer_id"] = user.bitzer_id
+
     for k, v in data.items():
         setattr(t, k, v)
     db.commit()

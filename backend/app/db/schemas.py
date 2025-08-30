@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, constr
+from pydantic import BaseModel, model_validator, constr
 import datetime
 from typing import List, Optional, Annotated
 import enum
@@ -94,14 +94,11 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
-    @field_validator("end_at")
-    @classmethod
-    def validate_dates(cls, end_at, values):
-        start_at = values.get("start_at")
-        if start_at and end_at and end_at < start_at:
+    @model_validator(mode="after")
+    def check_dates(self) -> "TaskUpdate":
+        if self.start_at and self.end_at and self.end_at < self.start_at:
             raise ValueError("Uma tarefa não pode acabar antes do seu início.")
-        return end_at
-
+        return self
 
 class TaskUpdate(BaseModel):
     process_type: Optional[ProcessType] = None
@@ -115,13 +112,11 @@ class TaskUpdate(BaseModel):
     operator_bitzer_id: Optional[int] = None
     notes: Annotated[Optional[str], constr(max_length=1000)] = None
 
-    @field_validator("end_at")
-    @classmethod
-    def validate_dates(cls, end_at, values):
-        start_at = values.get("start_at")
-        if start_at and end_at and end_at < start_at:
+    @model_validator(mode="after")
+    def check_dates(self) -> "TaskUpdate":
+        if self.start_at and self.end_at and self.end_at < self.start_at:
             raise ValueError("Uma tarefa não pode acabar antes do seu início.")
-        return end_at
+        return self
 
 
 class Task(TaskBase):

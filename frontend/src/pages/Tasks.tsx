@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { Button, Spinner, Alert, Row, Col, Card, Form } from "react-bootstrap";
+import { Button, Spinner, Alert, Row, Col, Card, Form, InputGroup } from "react-bootstrap";
 import { ArrowLeft } from "react-bootstrap-icons";
 import { type Task, formatDateTime, processTypeLabels } from "../utils/Types";
 import EditTask from "../components/EditTask";
@@ -28,17 +28,24 @@ export default function TaskDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<Task | null>(null);
-  const [goodPiecesInput, setGoodPiecesInput] = useState<number | "">("");
-  const [badPiecesInput, setBadPiecesInput] = useState<number | "">("");
+
+  // counters / inputs always visible (moved below button)
+  const [goodPieces, setGoodPieces] = useState<number | "">("");
+  const [badPieces, setBadPieces] = useState<number | "">("");
+  const [numBenches, setNumBenches] = useState<number | "">("");
+  const [numMachines, setNumMachines] = useState<number | "">("");
+  const [notes, setNotes] = useState<string>("");
+
+  // timer
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // edit modal
   const [showEdit, setShowEdit] = useState(false);
   const [editFieldKey, setEditFieldKey] = useState<string>("");
   const [editLabel, setEditLabel] = useState<string>("");
   const [editInitial, setEditInitial] = useState<any>(null);
 
-  // Fetch task
   useEffect(() => {
     if (!taskId) {
       setError("Task ID inválido");
@@ -54,8 +61,14 @@ export default function TaskDetail() {
         if (!res.ok) throw new Error(`Erro ao buscar tarefa: ${res.status}`);
         const data: Task = await res.json();
         setTask(data);
-        setGoodPiecesInput(data.good_pieces ?? "");
-        setBadPiecesInput(data.bad_pieces ?? "");
+
+        // populate local editable fields
+        setGoodPieces(data.good_pieces ?? "");
+        setBadPieces(data.bad_pieces ?? "");
+        setNumBenches(data.num_benches ?? "");
+        setNumMachines(data.num_machines ?? "");
+        setNotes(data.notes ?? "");
+
         setTimerSeconds(computeDurationSeconds(data));
       } catch (err: any) {
         setError(err.message || "Erro inesperado");
@@ -65,9 +78,10 @@ export default function TaskDetail() {
     };
 
     fetchTask();
+
     return () => {
       if (timerRef.current) {
-        window.clearInterval(timerRef.current);
+        clearInterval(timerRef.current);
         timerRef.current = null;
       }
     };
@@ -128,19 +142,27 @@ export default function TaskDetail() {
     }
   };
 
-  const handleSavePieces = async () => {
+  const handleSaveAll = async () => {
     if (!task) return;
     try {
       setLoading(true);
-      const updated = await updateTaskOnServer({
-        good_pieces: typeof goodPiecesInput === "number" ? goodPiecesInput : null,
-        bad_pieces: typeof badPiecesInput === "number" ? badPiecesInput : null,
-      });
+      const payload: Partial<Task> = {
+        good_pieces: typeof goodPieces === "number" ? goodPieces : null,
+        bad_pieces: typeof badPieces === "number" ? badPieces : null,
+        num_benches: typeof numBenches === "number" ? numBenches : null,
+        num_machines: typeof numMachines === "number" ? numMachines : null,
+        notes: notes === "" ? null : notes,
+      };
+      const updated = await updateTaskOnServer(payload);
       setTask(updated);
-      setGoodPiecesInput(updated.good_pieces ?? "");
-      setBadPiecesInput(updated.bad_pieces ?? "");
+      // sync local fields
+      setGoodPieces(updated.good_pieces ?? "");
+      setBadPieces(updated.bad_pieces ?? "");
+      setNumBenches(updated.num_benches ?? "");
+      setNumMachines(updated.num_machines ?? "");
+      setNotes(updated.notes ?? "");
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar peças");
+      setError(err.message || "Erro ao salvar");
     } finally {
       setLoading(false);
     }
@@ -155,8 +177,11 @@ export default function TaskDetail() {
 
   const handleTaskSaved = (updated: Task) => {
     setTask(updated);
-    setGoodPiecesInput(updated.good_pieces ?? "");
-    setBadPiecesInput(updated.bad_pieces ?? "");
+    setGoodPieces(updated.good_pieces ?? "");
+    setBadPieces(updated.bad_pieces ?? "");
+    setNumBenches(updated.num_benches ?? "");
+    setNumMachines(updated.num_machines ?? "");
+    setNotes(updated.notes ?? "");
     setTimerSeconds(computeDurationSeconds(updated));
   };
 
@@ -171,7 +196,6 @@ export default function TaskDetail() {
   if (!task) return <Alert variant="danger">Tarefa não encontrada</Alert>;
 
   const processedLabel = processTypeLabels[task.process_type] ?? task.process_type ?? "-";
-  const piecesEditable = Boolean(task.start_at && task.end_at);
 
   let btnVariant: "success" | "danger" | "primary" = "success";
   let btnLabel = "Iniciar";
@@ -185,6 +209,10 @@ export default function TaskDetail() {
     btnVariant = "primary";
     btnLabel = "Concluído";
   }
+
+  // small helper for counters
+  const inc = (setter: (v: any) => void, step = 1) => setter((prev: any) => (prev === "" || prev === null ? step : Math.max(0, Number(prev) + step)));
+  const dec = (setter: (v: any) => void, step = 1) => setter((prev: any) => (prev === "" || prev === null ? 0 : Math.max(0, Number(prev) - step)));
 
   return (
     <div className="p-3 position-relative" style={{ height: "100%" }}>
@@ -200,7 +228,7 @@ export default function TaskDetail() {
           { key: "operator", label: "Operador", value: task.operator_user?.name ?? "Sem Operador" },
         ].map(({ key, label, value }, idx) => (
           <Col key={idx} xs={12} sm={4} md={2}>
-            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(key, label === "Fim" || label === "Início" ? "Data/Tempo" : label, value === "--:--:--" ? "" : value)}>
+            <Card className="p-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(String(key), label === "Fim" || label === "Início" ? "Data/Tempo" : label, value === "" ? "" : value)}>
               <Card.Title style={{ fontSize: "0.9rem" }}>{label}</Card.Title>
               <Card.Text style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{value}</Card.Text>
             </Card>
@@ -216,7 +244,7 @@ export default function TaskDetail() {
           size="lg"
           style={{ width: "400px", height: "120px", fontSize: "2rem", fontWeight: "bold" }}
           onClick={handleStartStop}
-          disabled={loading || (Boolean(task.start_at) && Boolean(task.end_at))}
+          disabled={Boolean(loading) || (Boolean(task.start_at) && Boolean(task.end_at))}
         >
           {btnLabel}
           <br />
@@ -224,40 +252,59 @@ export default function TaskDetail() {
         </Button>
       </div>
 
-      <div className="position-fixed start-0 end-0 p-3 shadow" style={{ bottom: "10px", zIndex: 1030 }}>
-        <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSavePieces();
-          }}
-        >
-          <Row className="justify-content-center align-items-end">
-            <Col xs={4} sm={3} md={2}>
-              <Form.Group controlId="goodPieces">
-                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>
-                  Peças Boas
-                </Form.Label>
-                <Form.Control type="number" value={goodPiecesInput} onChange={(e) => setGoodPiecesInput(e.target.value === "" ? "" : Number(e.target.value))} disabled={!piecesEditable} min={0} />
-              </Form.Group>
-            </Col>
+      {/* Fields directly below the big button */}
+      <Form onSubmit={(e) => { e.preventDefault(); handleSaveAll(); }}>
+        <Row className="mb-2">
+          <Col md={6}>
+            <Form.Label>Peças Boas</Form.Label>
+            <InputGroup>
+              <Button variant="outline-secondary" onClick={() => dec(setGoodPieces)}>-</Button>
+              <Form.Control type="number" min={0} value={goodPieces} onChange={(e) => setGoodPieces(e.target.value === "" ? "" : Number(e.target.value))} />
+              <Button variant="outline-secondary" onClick={() => inc(setGoodPieces)}>+</Button>
+            </InputGroup>
+          </Col>
 
-            <Col xs={4} sm={3} md={2}>
-              <Form.Group controlId="badPieces">
-                <Form.Label className="w-100 text-center" style={{ fontSize: "0.85rem" }}>
-                  Peças Defetivas
-                </Form.Label>
-                <Form.Control type="number" value={badPiecesInput} onChange={(e) => setBadPiecesInput(e.target.value === "" ? "" : Number(e.target.value))} disabled={!piecesEditable} min={0} />
-              </Form.Group>
-            </Col>
+          <Col md={6}>
+            <Form.Label>Peças Defeituosas</Form.Label>
+            <InputGroup>
+              <Button variant="outline-secondary" onClick={() => dec(setBadPieces)}>-</Button>
+              <Form.Control type="number" min={0} value={badPieces} onChange={(e) => setBadPieces(e.target.value === "" ? "" : Number(e.target.value))} />
+              <Button variant="outline-secondary" onClick={() => inc(setBadPieces)}>+</Button>
+            </InputGroup>
+          </Col>
+        </Row>
 
-            <Col xs="auto">
-              <Button type="submit" variant="success" disabled={!piecesEditable}>
-                Salvar
-              </Button>
-            </Col>
-          </Row>
-        </Form>
-      </div>
+        <Row className="mb-2">
+          <Col md={6}>
+            <Form.Label>Bancadas</Form.Label>
+            <InputGroup>
+              <Button variant="outline-secondary" onClick={() => dec(setNumBenches)}>-</Button>
+              <Form.Control type="number" min={0} value={numBenches} onChange={(e) => setNumBenches(e.target.value === "" ? "" : Number(e.target.value))} />
+              <Button variant="outline-secondary" onClick={() => inc(setNumBenches)}>+</Button>
+            </InputGroup>
+          </Col>
+
+          <Col md={6}>
+            <Form.Label>Máquinas</Form.Label>
+            <InputGroup>
+              <Button variant="outline-secondary" onClick={() => dec(setNumMachines)}>-</Button>
+              <Form.Control type="number" min={0} value={numMachines} onChange={(e) => setNumMachines(e.target.value === "" ? "" : Number(e.target.value))} />
+              <Button variant="outline-secondary" onClick={() => inc(setNumMachines)}>+</Button>
+            </InputGroup>
+          </Col>
+        </Row>
+
+        <Row className="mb-3">
+          <Col>
+            <Form.Label>Observações</Form.Label>
+            <Form.Control as="textarea" rows={3} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas do operador (máx. 1000 caracteres)" />
+          </Col>
+        </Row>
+
+        <div className="d-flex justify-content-center">
+          <Button type="submit" variant="success" disabled={loading}>Salvar</Button>
+        </div>
+      </Form>
     </div>
   );
 }
